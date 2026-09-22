@@ -1,0 +1,24 @@
+{
+  "name": "@everyone-house/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "migration:generate": "npm run build && typeorm migration:generate ./src/migrations/$npm_config_name -d dist/data-source.js && node ../../scripts/fix-migration-imports.mjs",
+    "migration:run": "npm run build && typeorm migration:run -d dist/data-source.js",
+    "migration:revert": "npm run build && typeorm migration:revert -d dist/data-source.js"
+  },
+  "dependencies": {
+    "@everyone-house/domain": "*",
+    "pg": "^8.23.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.1.1"
+  }
+}
