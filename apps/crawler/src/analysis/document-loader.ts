@@ -29,9 +29,28 @@ export class DocumentLoader {
     return attachments.find((attachment) => attachment.isPdf()) ?? attachments[0] ?? null;
   }
 
-  public async loadText(attachment: NoticeAttachment): Promise<string> {
+  /**
+   * 공고문을 받아 임시 파일로 두고 텍스트를 뽑는다.
+   * PDF 경로를 함께 돌려주는 이유는 공급표 페이지를 찾고 렌더링하려면 원본이 필요해서다.
+   * 호출한 쪽이 반드시 dispose() 로 정리한다.
+   */
+  public async load(attachment: NoticeAttachment): Promise<{ text: string; pdfPath: string; dispose: () => Promise<void> }> {
     const pdfBytes = await this._download(attachment);
-    return await this._extractText(pdfBytes);
+    const workDir = await mkdtemp(join(tmpdir(), 'eh-notice-'));
+    const pdfPath = join(workDir, 'notice.pdf');
+    const textPath = join(workDir, 'notice.txt');
+
+    await writeFile(pdfPath, pdfBytes);
+    // -layout: 표 구조를 보존한다. 소득 금액표를 읽으려면 필수다.
+    await execFileAsync('pdftotext', ['-layout', pdfPath, textPath]);
+    const text = await readFile(textPath, 'utf8');
+
+    if (text.trim().length < 500) {
+      await rm(workDir, { recursive: true, force: true });
+      throw new Error('추출된 텍스트가 너무 짧습니다 (스캔본이거나 추출 실패)');
+    }
+
+    return { text, pdfPath, dispose: async () => rm(workDir, { recursive: true, force: true }) };
   }
 
   private async _download(attachment: NoticeAttachment): Promise<Buffer> {

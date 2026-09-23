@@ -1,9 +1,9 @@
-import type { NoticeCriteria, NoticeCriteriaRecord, SupplyUnit } from '@everyone-house/domain';
+import type { NoticeCriteria, NoticeCriteriaRecord, SupplyTablePage } from '@everyone-house/domain';
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { Injectable, Logger } from '@nestjs/common';
 import { AnthropicConfigService } from '../config/anthropic/anthropic-config.service.js';
-import { noticeCriteriaSchema, supplyUnitsSchema } from './criteria.schema.js';
+import { noticeCriteriaSchema } from './criteria.schema.js';
 
 /**
  * 공고문 PDF 텍스트에서 자격·순위 기준을 추출한다.
@@ -60,23 +60,29 @@ export class NoticeAnalyzer {
     this._client = new Anthropic({ apiKey: this._anthropicConfig.apiKey });
   }
 
-  public async analyze({ noticeId, sourceFileName, documentText }: { noticeId: string; sourceFileName: string; documentText: string }): Promise<NoticeCriteriaRecord> {
+  public async analyze({
+    noticeId,
+    sourceFileName,
+    documentText,
+    supplyTablePages = [],
+  }: {
+    noticeId: string;
+    sourceFileName: string;
+    documentText: string;
+    supplyTablePages?: SupplyTablePage[];
+  }): Promise<NoticeCriteriaRecord> {
     this._logger.log(`공고문 분석 시작: ${sourceFileName} (${documentText.length.toLocaleString('ko-KR')}자)`);
 
-    // 두 번 나눠 뽑는다 — 한 스키마에 합치면 구조화 출력 문법이 한계를 넘는다.
-    // 두 번째 호출은 같은 문서를 쓰므로 프롬프트 캐시에 걸려 입력 비용이 거의 들지 않는다.
     const { criteria, usage } = await this._extract(documentText);
-    const { supplyUnits, usage: supplyUsage } = await this._extractSupplyUnits(documentText);
 
     this._logger.log(
-      `분석 완료: 계층 ${criteria.categories.length}개, 순위 ${criteria.ranks.length}개, 공급 ${supplyUnits.length}건, 불확실 ${criteria.uncertainNotes.length}건`,
+      `분석 완료: 계층 ${criteria.categories.length}개, 순위 ${criteria.ranks.length}개, 공급표 ${supplyTablePages.length}p, 불확실 ${criteria.uncertainNotes.length}건`,
     );
     this._logUsage(usage);
-    this._logUsage(supplyUsage);
 
     return {
       ...criteria,
-      supplyUnits,
+      supplyTablePages,
       noticeId,
       model: NoticeAnalyzer.MODEL,
       extractedAt: new Date().toISOString(),
@@ -123,34 +129,10 @@ export class NoticeAnalyzer {
     return { criteria: response.parsed_output as NoticeCriteria, usage: response.usage };
   }
 
-  private async _extractSupplyUnits(documentText: string): Promise<{ supplyUnits: SupplyUnit[]; usage: Anthropic.Usage }> {
-    const response = await this._client.messages.parse({
-      model: NoticeAnalyzer.MODEL,
-      max_tokens: NoticeAnalyzer.MAX_TOKENS,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: NoticeAnalyzer.EFFORT, format: zodOutputFormat(supplyUnitsSchema) },
-      system: NoticeAnalyzer.SYSTEM_PROMPT,
-      messages: [this._documentMessage("'임대 대상 및 금액' 표를 행 단위로 추출하세요.", documentText)],
-    });
-
-    if (!response.parsed_output) {
-      throw new Error('공급 정보를 파싱하지 못했습니다');
-    }
-
-    return { supplyUnits: (response.parsed_output as { supplyUnits: SupplyUnit[] }).supplyUnits, usage: response.usage };
-  }
-
-  /**
-   * 문서를 캐시 가능한 블록으로 둔다 — 지시문이 뒤에 와야 문서 prefix 가 동일해져
-   * 두 번째 호출이 캐시에 걸린다.
-   */
   private _documentMessage(instruction: string, documentText: string): Anthropic.MessageParam {
     return {
       role: 'user',
-      content: [
-        { type: 'text', text: `다음은 공공임대주택 모집공고문 전문입니다.\n\n---\n${documentText}`, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: instruction },
-      ],
+      content: `다음은 공공임대주택 모집공고문 전문입니다. ${instruction}\n\n---\n${documentText}`,
     };
   }
 }

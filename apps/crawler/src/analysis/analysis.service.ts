@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Symbols } from '../symbols.js';
 import { DocumentLoader } from './document-loader.js';
 import { NoticeAnalyzer } from './notice-analyzer.js';
+import { SupplyTableLocator } from './supply-table-locator.js';
 
 export interface AnalysisResult {
   analyzed: number;
@@ -31,6 +32,7 @@ export class AnalysisService {
     @Inject(Symbols.criteriaRepository) private readonly _criteriaRepository: ICriteriaRepository,
     private readonly _documentLoader: DocumentLoader,
     private readonly _noticeAnalyzer: NoticeAnalyzer,
+    private readonly _supplyTableLocator: SupplyTableLocator,
   ) {}
 
   public async runAnalysis(batchSize = AnalysisService.BATCH_SIZE): Promise<AnalysisResult> {
@@ -57,12 +59,20 @@ export class AnalysisService {
       return 'skipped';
     }
 
+    const loaded = await this._documentLoader.load(document).catch((error: unknown) => error as Error);
+    if (loaded instanceof Error) {
+      return await this._handleFailure(notice, loaded);
+    }
+
     try {
-      const documentText = await this._documentLoader.loadText(document);
+      // 공급표는 LLM 없이 페이지 위치만 찾는다. 표는 이미지로 그대로 보여준다.
+      const supplyTablePages = await this._supplyTableLocator.locate(loaded.pdfPath);
+
       const record = await this._noticeAnalyzer.analyze({
         noticeId: notice.noticeId,
         sourceFileName: document.fileName,
-        documentText,
+        documentText: loaded.text,
+        supplyTablePages,
       });
 
       await this._criteriaRepository.save(record);
@@ -70,6 +80,8 @@ export class AnalysisService {
       return 'analyzed';
     } catch (error) {
       return await this._handleFailure(notice, error);
+    } finally {
+      await loaded.dispose();
     }
   }
 

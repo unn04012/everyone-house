@@ -36,9 +36,9 @@ export class NoticeCriteriaOrmEntity {
   @Column({ type: 'jsonb', name: 'income_table' })
   incomeTable!: unknown;
 
-  /** SupplyUnit[] — 단지·면적·보증금·월세. 목록 API 로는 알 수 없는 정보다 */
-  @Column({ type: 'jsonb', name: 'supply_units', default: () => "'[]'::jsonb" })
-  supplyUnits!: unknown;
+  /** SupplyTablePage[] — 임대 금액표가 있는 페이지. 이미지로 보여주기 위한 위치 정보 */
+  @Column({ type: 'jsonb', name: 'supply_table_pages', default: () => "'[]'::jsonb" })
+  supplyTablePages!: unknown;
 
   /** string[] */
   @Column({ type: 'jsonb', name: 'manual_check_notes' })

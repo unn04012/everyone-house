@@ -97,23 +97,21 @@ export interface IncomeTableRow {
  * 목록 API 로는 알 수 없는 정보다 — 어느 단지에 몇 ㎡ 가 얼마에 나오는지가 있어야
  * 사용자가 신청 여부를 판단할 수 있다. 같은 공고에서도 계층·면적별로 조건이 다르다.
  */
-export interface SupplyUnit {
-  /** 단지명. 모르면 빈 문자열 */
-  complexName: string;
-  /** 시군구·자치구 */
-  district: string;
-  /** 공급유형 면적 (㎡). 모르면 0 */
-  areaType: number;
-  /** 어느 계층 몫인가. 예: '신혼부부', '청년(소득있음)' */
-  supplyCategory: string;
-  /** 공급 호수 */
-  totalUnits: number;
-  /** 임대보증금 (원) */
-  deposit: number;
-  /** 월임대료 (원) */
-  monthlyRent: number;
-  /** 입주 시작 예정 */
-  moveInFrom: string;
+/**
+ * 공고문에서 '임대 대상 및 금액' 표가 있는 페이지.
+ *
+ * 표를 구조화해 뽑는 대신 페이지를 그대로 이미지로 보여준다:
+ *  - LLM 비용이 들지 않는다 (제목 문자열 검색 + PDF 렌더링뿐)
+ *  - 원본 그대로라 전사 오류가 없고, 사용자도 공식 문서를 그대로 본다
+ *  - 구조화 출력 스키마가 한계를 넘지 않는다
+ *
+ * 대신 보증금·면적으로 거르는 건 불가능하다. 필요해지면 그때 구조화한다.
+ */
+export interface SupplyTablePage {
+  /** 1부터 시작하는 페이지 번호 */
+  pageNumber: number;
+  /** 그 페이지에서 찾은 제목. 예: '임대 대상 및 금액 [신규 공급] 154호' */
+  heading: string;
 }
 
 export interface NoticeCriteria {
@@ -126,8 +124,8 @@ export interface NoticeCriteria {
   ranks: RankRule[];
   /** 공고문에 실린 가구원수별 소득 금액표. 없으면 빈 배열 */
   incomeTable: IncomeTableRow[];
-  /** '임대 대상 및 금액' 표. 단지·면적·보증금·월세. 없으면 빈 배열 */
-  supplyUnits: SupplyUnit[];
+  /** '임대 대상 및 금액' 표가 실린 페이지들. 이미지로 보여주기 위한 위치 정보 */
+  supplyTablePages: SupplyTablePage[];
   /** 자동 판정이 어려운 조건. 사용자에게 그대로 보여준다 */
   manualCheckNotes: string[];
   /** 추출 실패·불확실 항목 */

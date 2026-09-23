@@ -9,6 +9,7 @@ import { MatchingService } from '../matching/matching.service.js';
 import { AnalysisService } from './analysis.service.js';
 import { DocumentLoader } from './document-loader.js';
 import { NoticeAnalyzer } from './notice-analyzer.js';
+import { SupplyTableLocator } from './supply-table-locator.js';
 
 @Module({
   imports: [AppConfigModule, AnthropicConfigModule, DatabaseModule],
@@ -17,6 +18,7 @@ import { NoticeAnalyzer } from './notice-analyzer.js';
     MatchingService,
     NoticeAnalyzer,
     DocumentLoader,
+    SupplyTableLocator,
     {
       provide: Symbols.noticeRepository,
       useFactory: (dataSource: DataSource) => new NoticeRepositoryPostgres(dataSource),
