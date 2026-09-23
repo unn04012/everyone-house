@@ -21,6 +21,7 @@ const buildCriteria = (ranks: RankRule[]): NoticeCriteria => ({
   categories: [],
   ranks,
   incomeTable: [],
+  supplyUnits: [],
   manualCheckNotes: [],
   uncertainNotes: [],
 });

@@ -49,6 +49,7 @@ export const happyHouseCriteria: NoticeCriteria = {
       ],
     },
   ],
+  supplyUnits: [],
   manualCheckNotes: ['나이·거주 요건과 순위별 조건은 공고문을 확인해야 합니다.'],
   uncertainNotes: [],
 };
