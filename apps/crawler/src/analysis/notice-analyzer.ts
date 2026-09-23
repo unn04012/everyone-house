@@ -16,7 +16,16 @@ import { noticeCriteriaSchema } from './criteria.schema.js';
  */
 @Injectable()
 export class NoticeAnalyzer {
-  private static readonly MODEL = 'claude-opus-5';
+  /** Opus 5.5 는 Opus 5 보다 싸다($4/$20 vs $5/$25). 더 새 모델이라 바꾸지 않을 이유가 없다. */
+  private static readonly MODEL = 'claude-opus-5-5';
+  /** 단가 (USD per 1M tokens). 비용을 눈으로 확인하기 위한 값이다. */
+  private static readonly INPUT_USD_PER_MTOK = 4;
+  private static readonly OUTPUT_USD_PER_MTOK = 20;
+  /**
+   * 추출은 정형 작업이라 최고 수준의 추론이 필요하지 않다.
+   * thinking 출력은 입력의 5배 단가라 effort 를 낮추는 것이 비용에 가장 크게 작용한다.
+   */
+  private static readonly EFFORT = 'medium';
   /** 공고문은 길다(최대 15만 자). 스트리밍으로 받아 HTTP 타임아웃을 피한다. */
   private static readonly MAX_TOKENS = 16_000;
 
@@ -48,9 +57,10 @@ export class NoticeAnalyzer {
   public async analyze({ noticeId, sourceFileName, documentText }: { noticeId: string; sourceFileName: string; documentText: string }): Promise<NoticeCriteriaRecord> {
     this._logger.log(`공고문 분석 시작: ${sourceFileName} (${documentText.length.toLocaleString('ko-KR')}자)`);
 
-    const criteria = await this._extract(documentText);
+    const { criteria, usage } = await this._extract(documentText);
 
     this._logger.log(`분석 완료: 계층 ${criteria.categories.length}개, 순위 ${criteria.ranks.length}개, 불확실 ${criteria.uncertainNotes.length}건`);
+    this._logUsage(usage);
 
     return {
       ...criteria,
@@ -61,11 +71,28 @@ export class NoticeAnalyzer {
     };
   }
 
-  private async _extract(documentText: string): Promise<NoticeCriteria> {
+  /**
+   * 사용량을 매 호출마다 남긴다.
+   * 남기지 않으면 비용이 얼마나 나가는지 알 수 없고, 추정은 쉽게 빗나간다 —
+   * 특히 thinking 출력 토큰은 입력의 5배 단가라 무시하면 크게 틀린다.
+   */
+  private _logUsage(usage: Anthropic.Usage): void {
+    const thinking = usage.output_tokens_details?.thinking_tokens ?? 0;
+    const cost =
+      (usage.input_tokens * NoticeAnalyzer.INPUT_USD_PER_MTOK + usage.output_tokens * NoticeAnalyzer.OUTPUT_USD_PER_MTOK) / 1_000_000;
+
+    this._logger.log(
+      `사용량: 입력 ${usage.input_tokens.toLocaleString('ko-KR')} / 출력 ${usage.output_tokens.toLocaleString('ko-KR')}` +
+        `(thinking ${thinking.toLocaleString('ko-KR')}) → 약 $${cost.toFixed(3)}`,
+    );
+  }
+
+  private async _extract(documentText: string): Promise<{ criteria: NoticeCriteria; usage: Anthropic.Usage }> {
     const response = await this._client.messages.parse({
       model: NoticeAnalyzer.MODEL,
       max_tokens: NoticeAnalyzer.MAX_TOKENS,
       thinking: { type: 'adaptive' },
+      output_config: { effort: NoticeAnalyzer.EFFORT, format: zodOutputFormat(noticeCriteriaSchema) },
       system: NoticeAnalyzer.SYSTEM_PROMPT,
       messages: [
         {
@@ -73,13 +100,12 @@ export class NoticeAnalyzer {
           content: `다음은 공공임대주택 모집공고문 전문입니다. 신청 자격과 순위 기준을 추출하세요.\n\n---\n${documentText}`,
         },
       ],
-      output_config: { format: zodOutputFormat(noticeCriteriaSchema) },
     });
 
     if (!response.parsed_output) {
       throw new Error('공고문 분석 결과를 파싱하지 못했습니다');
     }
 
-    return response.parsed_output as NoticeCriteria;
+    return { criteria: response.parsed_output as NoticeCriteria, usage: response.usage };
   }
 }
