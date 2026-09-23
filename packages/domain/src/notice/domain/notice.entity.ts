@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { NoticeAttachment } from './notice-attachment.js';
-import type { NoticeSchema, NoticeStatus, SourceId, SupplyType } from './notice.types.js';
+import type { AnalysisStatus, NoticeSchema, NoticeStatus, SourceId, SupplyType } from './notice.types.js';
 
 export class NoticeEntity {
   private readonly _noticeId: string;
@@ -17,6 +17,8 @@ export class NoticeEntity {
   private _status: NoticeStatus;
   private _closesAt: Date | null;
   private _attachments: NoticeAttachment[];
+  private _analysisStatus: AnalysisStatus;
+  private _analysisAttempts: number;
 
   get noticeId() {
     return this._noticeId;
@@ -54,6 +56,12 @@ export class NoticeEntity {
   get attachments(): readonly NoticeAttachment[] {
     return this._attachments;
   }
+  get analysisStatus() {
+    return this._analysisStatus;
+  }
+  get analysisAttempts() {
+    return this._analysisAttempts;
+  }
 
   private constructor(schema: NoticeSchema) {
     this._noticeId = schema.noticeId;
@@ -68,6 +76,8 @@ export class NoticeEntity {
     this._closesAt = schema.closesAt;
     this._rawJson = schema.rawJson;
     this._attachments = schema.attachments.map((attachment) => NoticeAttachment.fromSchema(attachment));
+    this._analysisStatus = schema.analysisStatus;
+    this._analysisAttempts = schema.analysisAttempts;
   }
 
   /**
@@ -110,6 +120,8 @@ export class NoticeEntity {
       closesAt: closesAt ?? null,
       rawJson: rawJson ?? null,
       attachments: [],
+      analysisStatus: 'PENDING',
+      analysisAttempts: 0,
     });
   }
 
@@ -131,6 +143,8 @@ export class NoticeEntity {
       closesAt: this._closesAt,
       rawJson: this._rawJson,
       attachments: this._attachments.map((attachment) => attachment.getAttachment()),
+      analysisStatus: this._analysisStatus,
+      analysisAttempts: this._analysisAttempts,
     };
   }
 

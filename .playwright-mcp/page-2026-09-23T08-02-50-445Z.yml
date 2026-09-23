@@ -1,0 +1,19 @@
+- generic [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e5]:
+      - generic [ref=f12e220]:
+        - generic [ref=f12e221]: 독립해서 살고 계신가요?
+        - generic [ref=f12e222]: 독립한 경우에는 내 개인 정보만 보고 있어요
+      - group [ref=f12e224]:
+        - generic [ref=f12e225]:
+          - radio "네 독립했어요! 자취하고 있어요" [checked] [active]
+          - generic [ref=f12e239] [cursor=pointer]:
+            - paragraph [ref=f12e240]: 네 독립했어요!
+            - paragraph [ref=f12e241]: 자취하고 있어요
+        - generic [ref=f12e242]:
+          - radio "아니요, 아직이에요 부모님·조부모님과 함께 살아요"
+          - generic [ref=f12e259] [cursor=pointer]:
+            - paragraph [ref=f12e260]: 아니요, 아직이에요
+            - paragraph [ref=f12e261]: 부모님·조부모님과 함께 살아요
+      - button "다음" [ref=f12e265] [cursor=pointer]
+  - alert [ref=f12e177]: 집지켜 | 가장 싸고 안전한 집 찾기

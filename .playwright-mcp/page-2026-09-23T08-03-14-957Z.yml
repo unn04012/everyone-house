@@ -1,0 +1,22 @@
+- generic [active] [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e287]:
+      - generic [ref=f12e288]: 조건에 맞는 매물을 찾을 준비를 모두 마쳤어요!
+      - generic [ref=f12e290]:
+        - paragraph [ref=f12e291]: 조건을 수정하고 싶다면?
+        - paragraph [ref=f12e292]: 설정 > 내 정보에서 수정이 가능해요!
+      - button "나한테 맞는 매물만 보러가기" [ref=f12e296] [cursor=pointer]
+  - alert [ref=f12e177]: 집지켜 | 가장 싸고 안전한 집 찾기
+  - generic:
+    - generic [ref=f12e300]:
+      - generic [ref=f12e301]:
+        - generic [ref=f12e302]:
+          - paragraph [ref=f12e303]: 너무 아까운 주거비, 아끼고 싶다면?
+          - paragraph [ref=f12e304]: 지금 바로 확인하세요!
+        - button [ref=f12e305] [cursor=pointer]
+      - generic [ref=f12e309]:
+        - generic [ref=f12e310]: 1초 만에 로그인 🚀
+        - button [ref=f12e312] [cursor=pointer]:
+          - img "카카오 로고" [ref=f12e313]
+          - paragraph [ref=f12e316]: 카카오로 시작하기
+    - button [ref=f12e317] [cursor=pointer]

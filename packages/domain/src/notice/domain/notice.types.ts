@@ -35,6 +35,19 @@ export type SupplyType = keyof typeof SupplyTypeEnum;
 
 import type { NoticeAttachmentSchema } from './notice-attachment.js';
 
+/**
+ * 공고문 분석 단계.
+ * SKIPPED 는 분석하지 않기로 한 공고다 — 관심 없는 유형이거나, 반복 실패했거나,
+ * 첨부가 분석 불가 형식인 경우. 무한 재시도로 비용을 태우지 않기 위해 필요하다.
+ */
+export enum AnalysisStatusEnum {
+  PENDING = 'PENDING',
+  ANALYZED = 'ANALYZED',
+  FAILED = 'FAILED',
+  SKIPPED = 'SKIPPED',
+}
+export type AnalysisStatus = keyof typeof AnalysisStatusEnum;
+
 /** 영속 형태. ORM 매핑과 도메인 엔티티 사이의 계약. */
 export interface NoticeSchema {
   noticeId: string;
@@ -49,4 +62,6 @@ export interface NoticeSchema {
   closesAt: Date | null;
   rawJson: Record<string, unknown> | null;
   attachments: NoticeAttachmentSchema[];
+  analysisStatus: AnalysisStatus;
+  analysisAttempts: number;
 }

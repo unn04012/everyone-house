@@ -1,5 +1,5 @@
 import { NoticeEntity } from '@everyone-house/domain';
-import type { INoticeRepository, NoticeAttachmentSchema, NoticeSchema, SourceId } from '@everyone-house/domain';
+import type { AnalysisStatus, INoticeRepository, NoticeAttachmentSchema, NoticeSchema, SourceId } from '@everyone-house/domain';
 import type { DataSource, QueryDeepPartialEntity, Repository } from 'typeorm';
 import { NoticeOrmEntity } from '../schema/notice.orm-entity.js';
 
@@ -36,6 +36,31 @@ export class NoticeRepositoryPostgres implements INoticeRepository {
     return entities;
   }
 
+  public async findPendingAnalysis(limit: number): Promise<NoticeEntity[]> {
+    const rows = await this._repository.find({
+      where: { analysisStatus: 'PENDING' },
+      order: { postedAt: 'DESC' },
+      take: limit,
+    });
+    return rows.map((row) => this._mapRowToEntity(row));
+  }
+
+  public async updateAnalysisStatus(noticeId: string, status: AnalysisStatus, attempts: number): Promise<void> {
+    await this._repository.update({ noticeId }, { analysisStatus: status, analysisAttempts: attempts });
+  }
+
+  public async skipAnalysisExcept(supplyTypes: readonly string[]): Promise<number> {
+    const result = await this._repository
+      .createQueryBuilder()
+      .update()
+      .set({ analysisStatus: 'SKIPPED' })
+      .where('analysis_status = :pending', { pending: 'PENDING' })
+      .andWhere('supply_type NOT IN (:...types)', { types: supplyTypes })
+      .execute();
+
+    return result.affected ?? 0;
+  }
+
   private _mapEntityToRow(entity: NoticeEntity): QueryDeepPartialEntity<NoticeOrmEntity> {
     const notice = entity.getNotice();
     return {
@@ -53,6 +78,7 @@ export class NoticeRepositoryPostgres implements INoticeRepository {
       rawJson: notice.rawJson ?? undefined,
       // 빈 배열로 덮어쓰면 이미 수집해 둔 첨부가 지워진다 (신규가 아닌 공고는 첨부를 다시 긁지 않는다).
       attachments: notice.attachments.length > 0 ? notice.attachments : undefined,
+      // 분석 상태는 분석 잡이 관리한다. 재수집이 되돌리면 안 된다.
     };
   }
 
@@ -70,6 +96,8 @@ export class NoticeRepositoryPostgres implements INoticeRepository {
       closesAt: row.closesAt,
       rawJson: (row.rawJson as Record<string, unknown> | null) ?? null,
       attachments: (row.attachments as NoticeAttachmentSchema[] | null) ?? [],
+      analysisStatus: row.analysisStatus,
+      analysisAttempts: row.analysisAttempts,
     };
     return NoticeEntity.fromSchema(schema);
   }

@@ -1,5 +1,7 @@
 import { NoticeStatusEnum, SourceIdEnum, SupplyTypeEnum } from '@everyone-house/domain';
 import type { NoticeStatus, SourceId, SupplyType } from '@everyone-house/domain';
+import { AnalysisStatusEnum } from '@everyone-house/domain';
+import type { AnalysisStatus } from '@everyone-house/domain';
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 /**
@@ -50,6 +52,17 @@ export class NoticeOrmEntity {
   /** NoticeAttachmentSchema[]. 공고에 종속된 값 객체라 별도 테이블을 두지 않는다. */
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
   attachments!: unknown;
+
+  /**
+   * 공고문 분석 단계. 수집 잡과 분석 잡을 나누기 위한 상태다.
+   * 분석은 공고당 1분 가까이 걸려(43건이면 40분) 수집과 한 잡에 둘 수 없다.
+   */
+  @Column({ type: 'enum', enum: AnalysisStatusEnum, name: 'analysis_status', default: AnalysisStatusEnum.PENDING })
+  analysisStatus!: AnalysisStatus;
+
+  /** 실패 누적. 한도를 넘으면 SKIPPED 로 보내 무한 재시도를 막는다 */
+  @Column({ type: 'int', name: 'analysis_attempts', default: 0 })
+  analysisAttempts!: number;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

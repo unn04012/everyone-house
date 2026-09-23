@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist *.tsbuildinfo",
     "crawl": "npm run build && node dist/entry/main.js",
-    "analyze:samples": "npm run build && node dist/entry/analyze-samples.js"
+    "analyze": "npm run build && node dist/entry/analyze.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",

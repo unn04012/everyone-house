@@ -23,6 +23,10 @@ export enum ReasonCodeEnum {
   NO_RULE_DATA = 'NO_RULE_DATA',
   /** 프로필에 값이 없어 판정 불가 (미입력과 0 은 다르다) */
   MISSING_PROFILE_DATA = 'MISSING_PROFILE_DATA',
+  /** 상한 경계(±5%)에 걸쳐 확정하지 않음 */
+  BORDERLINE = 'BORDERLINE',
+  /** 계층 나이 요건 밖 */
+  AGE_OUT_OF_RANGE = 'AGE_OUT_OF_RANGE',
   /** 공고문(PDF)에만 있는 조건이라 자동 판정 범위를 벗어남 */
   MANUAL_CHECK_REQUIRED = 'MANUAL_CHECK_REQUIRED',
 }

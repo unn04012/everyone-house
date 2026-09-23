@@ -1,0 +1,77 @@
+- generic [active] [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e5]:
+      - generic [ref=f12e7]:
+        - generic [ref=f12e8]:
+          - generic [ref=f12e9]: 주민등록등본 상 어느 지역에 거주하고 계신가요?
+          - generic [ref=f12e10]: 거주지에 따라 신청할 수 있는 공고가 달라져요
+        - generic [ref=f12e12]:
+          - generic [ref=f12e13]: 서울
+          - generic [ref=f12e15]: 경기
+          - generic [ref=f12e17]: 인천
+          - generic [ref=f12e19]: 부산
+          - generic [ref=f12e21]: 대구
+          - generic [ref=f12e23]: 대전
+          - generic [ref=f12e25]: 전남·광주
+          - generic [ref=f12e27]: 울산
+          - generic [ref=f12e29]: 경남
+          - generic [ref=f12e31]: 경북
+          - generic [ref=f12e33]: 충남
+          - generic [ref=f12e35]: 충북
+          - generic [ref=f12e37]: 전북
+          - generic [ref=f12e39]: 강원
+          - generic [ref=f12e41]: 제주
+          - generic [ref=f12e43]: 세종
+      - generic [ref=f12e47]:
+        - button [ref=f12e48] [cursor=pointer]:
+          - paragraph [ref=f12e49]: 강남구
+        - button [ref=f12e53] [cursor=pointer]:
+          - paragraph [ref=f12e54]: 강동구
+        - button [ref=f12e58] [cursor=pointer]:
+          - paragraph [ref=f12e59]: 강북구
+        - button [ref=f12e63] [cursor=pointer]:
+          - paragraph [ref=f12e64]: 강서구
+        - button [ref=f12e68] [cursor=pointer]:
+          - paragraph [ref=f12e69]: 관악구
+        - button [ref=f12e73] [cursor=pointer]:
+          - paragraph [ref=f12e74]: 광진구
+        - button [ref=f12e78] [cursor=pointer]:
+          - paragraph [ref=f12e79]: 구로구
+        - button [ref=f12e83] [cursor=pointer]:
+          - paragraph [ref=f12e84]: 금천구
+        - button [ref=f12e88] [cursor=pointer]:
+          - paragraph [ref=f12e89]: 노원구
+        - button [ref=f12e93] [cursor=pointer]:
+          - paragraph [ref=f12e94]: 도봉구
+        - button [ref=f12e98] [cursor=pointer]:
+          - paragraph [ref=f12e99]: 동대문구
+        - button [ref=f12e103] [cursor=pointer]:
+          - paragraph [ref=f12e104]: 동작구
+        - button [ref=f12e108] [cursor=pointer]:
+          - paragraph [ref=f12e109]: 마포구
+        - button [ref=f12e113] [cursor=pointer]:
+          - paragraph [ref=f12e114]: 서대문구
+        - button [ref=f12e118] [cursor=pointer]:
+          - paragraph [ref=f12e119]: 서초구
+        - button [ref=f12e123] [cursor=pointer]:
+          - paragraph [ref=f12e124]: 성동구
+        - button [ref=f12e128] [cursor=pointer]:
+          - paragraph [ref=f12e129]: 성북구
+        - button [ref=f12e133] [cursor=pointer]:
+          - paragraph [ref=f12e134]: 송파구
+        - button [ref=f12e138] [cursor=pointer]:
+          - paragraph [ref=f12e139]: 양천구
+        - button [ref=f12e143] [cursor=pointer]:
+          - paragraph [ref=f12e144]: 영등포구
+        - button [ref=f12e148] [cursor=pointer]:
+          - paragraph [ref=f12e149]: 용산구
+        - button [ref=f12e153] [cursor=pointer]:
+          - paragraph [ref=f12e154]: 은평구
+        - button [ref=f12e158] [cursor=pointer]:
+          - paragraph [ref=f12e159]: 종로구
+        - button [ref=f12e163] [cursor=pointer]:
+          - paragraph [ref=f12e164]: 중구
+        - button [ref=f12e168] [cursor=pointer]:
+          - paragraph [ref=f12e169]: 중랑구
+      - button "다음" [disabled] [ref=f12e176] [cursor=pointer]
+  - alert [ref=f12e177]: 집지켜 | 가장 싸고 안전한 집 찾기

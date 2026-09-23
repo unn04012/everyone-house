@@ -18,3 +18,8 @@ export { EligibilityTable2026 } from './eligibility/tables/2026.js';
 
 // criteria (공고문 추출)
 export * from './criteria/criteria.types.js';
+export type { ICriteriaRepository } from './criteria/criteria.repository.interface.js';
+
+// ranking (순위 판정)
+export { RankingEngine } from './ranking/ranking.engine.js';
+export * from './ranking/ranking.types.js';

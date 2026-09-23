@@ -105,7 +105,7 @@ export class MyhomeApiAdapter implements ISourceAdapter, IAttachmentResolver {
 
   private _toEntity(siblings: MyhomeRcritNtcItem[]): NoticeEntity {
     const [item] = siblings;
-    const regions = [...new Set(siblings.map((sibling) => `${sibling.brtcNm} ${sibling.signguNm}`.trim()))].sort();
+    const regions = [...new Set(siblings.map((sibling) => `${sibling.brtcNm} ${sibling.signguNm}`.trim()))].toSorted();
 
     return NoticeEntity.create({
       sourceId: this.sourceId,

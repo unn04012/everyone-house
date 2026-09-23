@@ -50,9 +50,23 @@ export class Location {
     return this.isSameProvince(other) && this._district !== null && this._district === other._district;
   }
 
-  /** 주어진 지역 목록에 포함되는가. 공고문의 순위별 지역 목록과 대조할 때 쓴다. */
-  public isIn(provinces: readonly string[]): boolean {
-    return provinces.some((name) => this._province === name || (this._district !== null && `${this._province} ${this._district}` === name));
+  /**
+   * 주어진 지역 목록에 포함되는가. 공고문의 순위별 지역 목록과 대조할 때 쓴다.
+   *
+   * 공고문은 시군구를 시도 없이 나열한다("수원시 · 평택시 · 동두천시").
+   * 반면 광역시도는 그대로 쓴다("서울특별시"). 세 형태를 모두 받는다.
+   */
+  public isIn(regions: readonly string[]): boolean {
+    return regions.some((region) => {
+      const name = region.trim();
+      if (this._province === name) {
+        return true;
+      }
+      if (this._district === null) {
+        return false;
+      }
+      return this._district === name || `${this._province} ${this._district}` === name;
+    });
   }
 
   public toString(): string {

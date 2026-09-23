@@ -1,0 +1,15 @@
+- generic [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e5]:
+      - generic [ref=f12e266]:
+        - generic [ref=f12e267]: 주민등록등본 상 나를 포함한 가족 수가 몇 명인가요?
+        - generic [ref=f12e268]: 가구 구성원 수에 따라 소득 조건 등이 달라져요
+      - generic [ref=f12e269]:
+        - generic [ref=f12e270]:
+          - spinbutton [active] [ref=f12e273]
+          - text: 명
+        - generic [ref=f12e278]:
+          - paragraph [ref=f12e279]: 입력전에 꼭!
+          - paragraph [ref=f12e281]: 형제ㆍ 자매 ㆍ친척ㆍ 동거인은 포함하면 안 돼요!임신 중이라면, 가구원 1명을 더 추가해주세요
+      - button "다음" [disabled] [ref=f12e285] [cursor=pointer]
+  - alert [ref=f12e177]: 집지켜 | 가장 싸고 안전한 집 찾기

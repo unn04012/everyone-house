@@ -1,5 +1,6 @@
 import type { DataSourceOptions } from 'typeorm';
 import { MatchOrmEntity } from './schema/match.orm-entity.js';
+import { NoticeCriteriaOrmEntity } from './schema/notice-criteria.orm-entity.js';
 import { NoticeOrmEntity } from './schema/notice.orm-entity.js';
 import { NotificationOrmEntity } from './schema/notification.orm-entity.js';
 import { UserProfileOrmEntity } from './schema/user-profile.orm-entity.js';
@@ -9,7 +10,7 @@ import { UserProfileOrmEntity } from './schema/user-profile.orm-entity.js';
  * 드라이버 교체가 필요해지면(Lambda 커넥션 고갈 대응) 이 클래스만 바꾼다.
  */
 export class DataSourceOptionsFactory {
-  public static readonly ORM_ENTITIES = [NoticeOrmEntity, MatchOrmEntity, UserProfileOrmEntity, NotificationOrmEntity];
+  public static readonly ORM_ENTITIES = [NoticeOrmEntity, NoticeCriteriaOrmEntity, MatchOrmEntity, UserProfileOrmEntity, NotificationOrmEntity];
 
   public static create({ url, logging = false }: { url?: string; logging?: boolean }): DataSourceOptions {
     if (!url) {

@@ -1,144 +1,254 @@
+import type { CategoryRule, IncomeTableRow, NoticeCriteria } from '../criteria/criteria.types.js';
 import type { NoticeEntity } from '../notice/domain/notice.entity.js';
 import type { UserProfileEntity } from '../profile/domain/user-profile.entity.js';
-import type { AmountByHouseholdSize, EligibilityTable, JudgeReason, JudgeResult, SupplyTypeRule, Verdict } from './eligibility.types.js';
+import type { JudgeReason, JudgeResult, Verdict } from './eligibility.types.js';
 
 /** 개별 기준 검사 결과. UNKNOWN 은 데이터가 없어 판단을 보류한 것이다. */
-type CheckOutcome = 'OK' | 'BLOCKED' | 'UNKNOWN';
+type CheckOutcome = 'OK' | 'BLOCKED' | 'BORDERLINE' | 'UNKNOWN';
 
 /**
  * 자격 자동 1차 필터. 확정 판정이 아니다. (SPEC §7)
  *
- * 기준표를 생성자로 주입받는다 — 엔진이 "올해 표"를 내부에서 집어오면
- * 과거 판정을 재현할 수 없다. 연도는 언제나 명시적 데이터다.
+ * 공고문에서 추출한 기준(NoticeCriteria)을 주입받아 판정한다 —
+ * 전역 기준표로는 맞출 수 없다. 소득 상한 금액조차 공고문마다 표로 실려 있고,
+ * 가산 규칙(1인 +20%p 등)이 이미 반영된 값이라 다시 계산하면 안 된다.
  *
  * I/O·현재 시각·전역 상태에 접근하지 않는다. 같은 입력이면 항상 같은 결과다.
  */
 export class EligibilityEngine {
-  private readonly _table: EligibilityTable;
+  /**
+   * 경계 완충 비율. 상한의 ±5% 안에 들면 확정하지 않고 검토로 보낸다.
+   *
+   * 사용자가 입력하는 소득은 근사치인데(연봉÷12 등), 실제 심사는 사회보장정보시스템의
+   * 공적자료로 한다. 실제로 7,297원(0.16%) 차이로 갈리는 사례가 나왔다 —
+   * 이 폭에서 '미해당'으로 단정하면 유효한 공고를 버리게 된다.
+   */
+  private static readonly BORDERLINE_RATIO = 0.05;
 
-  constructor(table: EligibilityTable) {
-    this._table = table;
+  private readonly _criteria: NoticeCriteria;
+
+  constructor(criteria: NoticeCriteria) {
+    this._criteria = criteria;
   }
 
-  get ruleset() {
-    return this._table.ruleset;
-  }
+  /**
+   * @param categoryLabel 어느 계층으로 신청하는지. 생략하면 프로필 계층에 맞는 것을 고른다.
+   */
+  public judge(profile: UserProfileEntity, notice: NoticeEntity, categoryLabel?: string): JudgeResult {
+    const ruleset = this._rulesetVersion(notice);
+    const category = this._selectCategory(profile, categoryLabel);
 
-  public judge(profile: UserProfileEntity, notice: NoticeEntity): JudgeResult {
-    const rule = this._table.rules[notice.supplyType];
-
-    if (!rule) {
-      return this._result('NEEDS_REVIEW', [
+    if (!category) {
+      return this._result('NEEDS_REVIEW', ruleset, [
         {
           code: 'NO_RULE_DATA',
-          message: `${notice.supplyType} 유형의 ${this._table.year}년 기준이 기준표에 없어 자동 판정을 건너뛰었습니다. 공고문을 직접 확인하세요.`,
+          message: `공고문에서 ${this._categoryHint(profile)} 계층의 자격 기준을 찾지 못해 자동 판정을 건너뛰었습니다. 공고문을 직접 확인하세요.`,
         },
       ]);
     }
 
-    // 무주택 요건 — 불충족이면 나머지를 보지 않는다
-    if (rule.requiresHomeless && !profile.isHomeless) {
-      return this._result('NOT_ELIGIBLE', [{ code: 'NOT_HOMELESS', message: '무주택 요건을 충족하지 않습니다.' }]);
+    if (category.requiresHomeless && !profile.isHomeless) {
+      return this._result('NOT_ELIGIBLE', ruleset, [{ code: 'NOT_HOMELESS', message: '무주택 요건을 충족하지 않습니다.' }]);
     }
 
     const reasons: JudgeReason[] = [];
-    const outcomes = [this._checkIncome(profile, rule, reasons), this._checkAssets(profile, rule, reasons), this._checkCarValue(profile, rule, reasons)];
+    const outcomes = [
+      this._checkIncome(profile, category, reasons),
+      this._checkLimit({
+        label: '총자산',
+        value: profile.totalAssets,
+        limit: category.totalAssetsLimit,
+        overCode: 'ASSETS_OVER_LIMIT',
+        withinCode: 'ASSETS_WITHIN_LIMIT',
+        reasons,
+      }),
+      this._checkLimit({
+        label: '자동차가액',
+        value: profile.carValue,
+        limit: category.carValueLimit,
+        overCode: 'CAR_OVER_LIMIT',
+        withinCode: 'CAR_WITHIN_LIMIT',
+        reasons,
+      }),
+      this._checkAge(profile, category, reasons),
+    ];
 
     if (outcomes.includes('BLOCKED')) {
-      return this._result('NOT_ELIGIBLE', reasons);
+      return this._result('NOT_ELIGIBLE', ruleset, reasons);
     }
 
-    // 나이·혼인·거주요건은 공고문에만 있는 경우가 많아 자동 확정하지 않는다.
-    reasons.push({ code: 'MANUAL_CHECK_REQUIRED', message: '나이·혼인·거주 요건과 순위별 조건은 공고문을 확인해야 합니다.' });
-
-    return this._result(outcomes.includes('UNKNOWN') ? 'NEEDS_REVIEW' : 'LIKELY_ELIGIBLE', reasons);
-  }
-
-  private _checkIncome(profile: UserProfileEntity, rule: SupplyTypeRule, reasons: JudgeReason[]): CheckOutcome {
-    const limit = this._incomeLimitFor(rule, profile.householdSize);
-
-    if (limit === null) {
-      reasons.push({ code: 'NO_RULE_DATA', message: `${profile.householdSize}인 가구의 소득 기준이 기준표에 없어 소득 비교를 건너뛰었습니다.` });
-      return 'UNKNOWN';
+    for (const note of this._criteria.manualCheckNotes) {
+      reasons.push({ code: 'MANUAL_CHECK_REQUIRED', message: note });
     }
 
-    if (profile.monthlyIncome > limit) {
-      reasons.push({
-        code: 'INCOME_OVER_LIMIT',
-        message: `월소득 ${this._formatWon(profile.monthlyIncome)}이 상한 ${this._formatWon(limit)}(${rule.incomePercent}%)을 초과합니다.`,
-      });
-      return 'BLOCKED';
-    }
+    // 추출이 불확실한 공고는 확정하지 않는다.
+    const hasUncertainExtraction = this._criteria.uncertainNotes.length > 0;
+    const needsReview = outcomes.includes('UNKNOWN') || outcomes.includes('BORDERLINE') || hasUncertainExtraction;
 
-    reasons.push({
-      code: 'INCOME_WITHIN_LIMIT',
-      message: `월소득 ${this._formatWon(profile.monthlyIncome)}이 상한 ${this._formatWon(limit)}(${rule.incomePercent}%) 이내입니다.`,
-    });
-    return 'OK';
-  }
-
-  private _checkAssets(profile: UserProfileEntity, rule: SupplyTypeRule, reasons: JudgeReason[]): CheckOutcome {
-    if (profile.totalAssets === null) {
-      reasons.push({ code: 'MISSING_PROFILE_DATA', message: '총자산을 입력하지 않아 자산 기준을 확인하지 못했습니다.' });
-      return 'UNKNOWN';
-    }
-
-    if (profile.totalAssets > rule.totalAssetsLimit) {
-      reasons.push({
-        code: 'ASSETS_OVER_LIMIT',
-        message: `총자산 ${this._formatWon(profile.totalAssets)}이 상한 ${this._formatWon(rule.totalAssetsLimit)}을 초과합니다.`,
-      });
-      return 'BLOCKED';
-    }
-
-    reasons.push({
-      code: 'ASSETS_WITHIN_LIMIT',
-      message: `총자산 ${this._formatWon(profile.totalAssets)}이 상한 ${this._formatWon(rule.totalAssetsLimit)} 이내입니다.`,
-    });
-    return 'OK';
-  }
-
-  private _checkCarValue(profile: UserProfileEntity, rule: SupplyTypeRule, reasons: JudgeReason[]): CheckOutcome {
-    if (profile.carValue === null) {
-      reasons.push({ code: 'MISSING_PROFILE_DATA', message: '자동차가액을 입력하지 않아 자동차 기준을 확인하지 못했습니다.' });
-      return 'UNKNOWN';
-    }
-
-    if (profile.carValue > rule.carValueLimit) {
-      reasons.push({
-        code: 'CAR_OVER_LIMIT',
-        message: `자동차가액 ${this._formatWon(profile.carValue)}이 상한 ${this._formatWon(rule.carValueLimit)}을 초과합니다.`,
-      });
-      return 'BLOCKED';
-    }
-
-    reasons.push({
-      code: 'CAR_WITHIN_LIMIT',
-      message: `자동차가액 ${this._formatWon(profile.carValue)}이 상한 ${this._formatWon(rule.carValueLimit)} 이내입니다.`,
-    });
-    return 'OK';
-  }
-
-  private _incomeLimitFor(rule: SupplyTypeRule, householdSize: number): number | null {
-    const base = rule.incomeBasis === 'URBAN_WORKER_AVERAGE' ? this._table.urbanWorkerAverage : this._table.medianIncome;
-    const baseAmount = this._lookupByHouseholdSize(base, householdSize);
-    return baseAmount === null ? null : (baseAmount * rule.incomePercent) / 100;
+    return this._result(needsReview ? 'NEEDS_REVIEW' : 'LIKELY_ELIGIBLE', ruleset, reasons);
   }
 
   /**
-   * 표에 없는 가구원수는 가장 큰 구간 값으로 대체하지 않고 null 을 돌려준다 —
-   * 대가구는 별도 가산 규칙이 붙는 경우가 있어 임의 확장이 위험하다.
+   * 소득 상한을 공고문 금액표에서 찾는다.
+   *
+   * 청년 계층이 세대원인 경우처럼 '본인만' 보는 규칙이 있으나, 세대주 여부를
+   * 프로필이 알지 못하므로 여기서는 프로필의 가구원수를 그대로 쓴다.
+   * 이 차이는 manualCheckNotes 로 사용자에게 전달된다.
    */
-  private _lookupByHouseholdSize(table: AmountByHouseholdSize, householdSize: number): number | null {
-    const amount = table[householdSize];
-    return typeof amount === 'number' ? amount : null;
+  private _checkIncome(profile: UserProfileEntity, category: CategoryRule, reasons: JudgeReason[]): CheckOutcome {
+    const percent = category.urbanWorkerIncomePercent ?? category.medianIncomePercent;
+    const basis = category.urbanWorkerIncomePercent !== null ? 'URBAN_WORKER_AVERAGE' : 'MEDIAN_INCOME';
+
+    if (percent === null) {
+      reasons.push({ code: 'NO_RULE_DATA', message: '공고문에서 소득 기준 비율을 찾지 못했습니다.' });
+      return 'UNKNOWN';
+    }
+
+    const limit = this._lookupIncomeLimit(percent, basis, profile.householdSize);
+    if (limit === null) {
+      reasons.push({
+        code: 'NO_RULE_DATA',
+        message: `공고문 소득표에 ${profile.householdSize}인 가구의 ${percent}% 금액이 없어 소득 비교를 건너뛰었습니다.`,
+      });
+      return 'UNKNOWN';
+    }
+
+    return this._compareWithBuffer({
+      label: `월소득(${percent}% 기준)`,
+      value: profile.monthlyIncome,
+      limit,
+      overCode: 'INCOME_OVER_LIMIT',
+      withinCode: 'INCOME_WITHIN_LIMIT',
+      reasons,
+    });
   }
 
-  private _formatWon(amount: number): string {
+  private _lookupIncomeLimit(percent: number, basis: string, householdSize: number): number | null {
+    const rows = this._criteria.incomeTable.filter((row: IncomeTableRow) => row.percent === percent && row.basis === basis);
+
+    for (const row of rows) {
+      const hit = row.amounts.find((entry) => entry.householdSize === householdSize);
+      if (hit) {
+        return hit.amount;
+      }
+    }
+
+    return null;
+  }
+
+  private _checkLimit({
+    label,
+    value,
+    limit,
+    overCode,
+    withinCode,
+    reasons,
+  }: {
+    label: string;
+    value: number | null;
+    limit: number | null;
+    overCode: JudgeReason['code'];
+    withinCode: JudgeReason['code'];
+    reasons: JudgeReason[];
+  }): CheckOutcome {
+    if (limit === null) {
+      reasons.push({ code: 'NO_RULE_DATA', message: `공고문에서 ${label} 상한을 찾지 못했습니다.` });
+      return 'UNKNOWN';
+    }
+    if (value === null) {
+      reasons.push({ code: 'MISSING_PROFILE_DATA', message: `${label}을 입력하지 않아 기준을 확인하지 못했습니다.` });
+      return 'UNKNOWN';
+    }
+
+    return this._compareWithBuffer({ label, value, limit, overCode, withinCode, reasons });
+  }
+
+  private _compareWithBuffer({
+    label,
+    value,
+    limit,
+    overCode,
+    withinCode,
+    reasons,
+  }: {
+    label: string;
+    value: number;
+    limit: number;
+    overCode: JudgeReason['code'];
+    withinCode: JudgeReason['code'];
+    reasons: JudgeReason[];
+  }): CheckOutcome {
+    const buffer = limit * EligibilityEngine.BORDERLINE_RATIO;
+
+    if (value > limit + buffer) {
+      reasons.push({ code: overCode, message: `${label} ${this._won(value)}이 상한 ${this._won(limit)}을 초과합니다.` });
+      return 'BLOCKED';
+    }
+
+    if (value > limit - buffer) {
+      const diff = value - limit;
+      const side = diff > 0 ? `${this._won(diff)} 초과` : `${this._won(-diff)} 여유`;
+      reasons.push({
+        code: 'BORDERLINE',
+        message: `${label} ${this._won(value)}이 상한 ${this._won(limit)}과 ${side}로 경계에 있습니다. 실제 심사는 공적자료 기준이라 결과가 달라질 수 있습니다.`,
+      });
+      return 'BORDERLINE';
+    }
+
+    reasons.push({ code: withinCode, message: `${label} ${this._won(value)}이 상한 ${this._won(limit)} 이내입니다.` });
+    return 'OK';
+  }
+
+  private _checkAge(profile: UserProfileEntity, category: CategoryRule, reasons: JudgeReason[]): CheckOutcome {
+    if (category.minAge === null && category.maxAge === null) {
+      return 'OK';
+    }
+    if ((category.minAge !== null && profile.age < category.minAge) || (category.maxAge !== null && profile.age > category.maxAge)) {
+      reasons.push({
+        code: 'AGE_OUT_OF_RANGE',
+        message: `나이 ${profile.age}세가 기준(${category.minAge ?? ''}~${category.maxAge ?? ''}세)을 벗어납니다.`,
+      });
+      return 'BLOCKED';
+    }
+
+    return 'OK';
+  }
+
+  /** 프로필 계층에 맞는 기준을 고른다. 라벨이 주어지면 그것을 우선한다. */
+  private _selectCategory(profile: UserProfileEntity, categoryLabel?: string): CategoryRule | null {
+    if (categoryLabel) {
+      return this._criteria.categories.find((category) => category.categoryLabel === categoryLabel) ?? null;
+    }
+
+    const hint = this._categoryHint(profile);
+    return this._criteria.categories.find((category) => category.categoryLabel.includes(hint)) ?? null;
+  }
+
+  private _categoryHint(profile: UserProfileEntity): string {
+    switch (profile.category) {
+      case 'UNIVERSITY_STUDENT':
+        return '대학생';
+      case 'YOUTH':
+        return '청년';
+      case 'NEWLYWED':
+        return '신혼';
+      case 'SENIOR':
+        return '고령';
+      default:
+        return '';
+    }
+  }
+
+  /** 판정 근거의 출처. 재현을 위해 공고 + 추출 모델을 함께 남긴다. */
+  private _rulesetVersion(notice: NoticeEntity): string {
+    return `notice:${notice.sourceId}:${notice.externalId}`;
+  }
+
+  private _won(amount: number): string {
     return `${Math.round(amount).toLocaleString('ko-KR')}원`;
   }
 
-  private _result(verdict: Verdict, reasons: JudgeReason[]): JudgeResult {
-    return { verdict, reasons, ruleset: this._table.ruleset };
+  private _result(verdict: Verdict, ruleset: string, reasons: JudgeReason[]): JudgeResult {
+    return { verdict, reasons, ruleset };
   }
 }
