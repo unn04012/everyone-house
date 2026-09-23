@@ -1,0 +1,183 @@
+/* =========================================================================
+   공공임대 알리미 — Design System (handoff)
+   Mobile-first. Desktop overrides live in the @media block at the bottom.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+:root{
+  /* --- surfaces & text --- */
+  --color-ground:#F4F5F1;   /* page background */
+  --color-paper:#FFFFFF;    /* cards, bars */
+  --color-ink:#15212E;      /* primary text */
+  --color-muted:#5A6472;    /* secondary text */
+  --color-faint:#8A929E;    /* tertiary text, footnotes */
+  --color-line:#E4E6DF;     /* borders, dividers */
+
+  /* --- brand / action --- */
+  --color-primary:#1E5E88;
+  --color-primary-dark:#153F58;
+  --color-primary-tint:#E7F0F5;
+
+  /* --- judgment states (see HANDOFF.md §Judgment) --- */
+  --color-ok:#2C7A57;       --color-ok-tint:#E6F1EC;     /* 신청 가능 (LIKELY_ELIGIBLE) */
+  --color-review:#4E5FA6;   --color-review-tint:#ECEEF9; /* 확인 필요 (NEEDS_REVIEW) — neutral indigo, NOT warning yellow */
+  --color-no:#8A929E;       --color-no-tint:#EAEBE6;     /* 안 맞음 (NOT_ELIGIBLE) — low-chroma gray, NOT red */
+
+  /* --- radius --- */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:100px;
+
+  /* --- spacing (4pt) --- */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-8:32px;
+
+  /* --- elevation --- */
+  --shadow-card:0 18px 44px rgba(21,33,46,.08);
+
+  /* --- type scale --- */
+  --fs-display:29px; --fs-h1:21px; --fs-h2:18px; --fs-body:15px;
+  --fs-sm:13.5px; --fs-xs:12.5px;
+
+  --font:'IBM Plex Sans KR',system-ui,-apple-system,sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:var(--font);color:var(--color-ink);background:var(--color-ground);
+  -webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;}
+input,select{font-family:inherit;}
+a{color:var(--color-primary);text-decoration:none;}
+
+/* --- layout ------------------------------------------------------------ */
+.container{width:100%;max-width:1080px;margin:0 auto;padding:0 20px;}
+.app-nav{height:56px;background:var(--color-paper);border-bottom:1px solid var(--color-line);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;}
+.brand__mark{width:30px;height:30px;border-radius:var(--r-sm);background:var(--color-primary);
+  display:flex;align-items:center;justify-content:center;}
+
+/* --- typography helpers ------------------------------------------------ */
+.eyebrow{font-size:var(--fs-sm);font-weight:700;color:var(--color-primary);letter-spacing:.02em;}
+.q-title{margin:12px 0 10px;font-size:24px;font-weight:700;line-height:1.35;letter-spacing:-.01em;}
+.q-sub{margin:0;font-size:var(--fs-body);color:var(--color-muted);line-height:1.55;}
+.footnote{font-size:var(--fs-xs);color:var(--color-faint);}
+
+/* --- buttons ----------------------------------------------------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:54px;
+  padding:0 22px;border-radius:13px;border:1.5px solid transparent;font-size:16px;font-weight:700;}
+.btn--primary{background:var(--color-primary);color:#fff;}
+.btn--secondary{background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line);font-weight:600;}
+.btn--ghost{background:transparent;color:var(--color-muted);border:none;font-weight:600;}
+.btn--block{width:100%;}
+
+/* --- progress (Tier 0 only; Tier 1+ shows no bounded meter) ------------- */
+.progress{height:6px;border-radius:var(--r-pill);background:var(--color-line);overflow:hidden;}
+.progress__fill{height:100%;background:var(--color-primary);border-radius:var(--r-pill);}
+
+/* --- card -------------------------------------------------------------- */
+.card{background:var(--color-paper);border:1px solid var(--color-line);border-radius:var(--r-lg);}
+
+/* =======================================================================
+   Amount input — the flagship component.
+   Numbers stored in WON (integer). Always echo a Korean-unit reading.
+   "0원" and "모름(null)" MUST be distinguishable — two separate controls.
+   ======================================================================= */
+.amount{background:var(--color-paper);border:1.5px solid var(--color-primary);
+  border-radius:var(--r-lg);overflow:hidden;}
+.amount__row{padding:20px 18px 16px;}
+.amount__num{display:flex;align-items:baseline;gap:8px;}
+.amount__num input{flex:1;min-width:0;border:none;outline:none;font:inherit;
+  font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink);padding:0;}
+.amount__unit{font-size:19px;font-weight:600;color:var(--color-muted);}
+.amount__echo{margin-top:8px;font-size:15px;font-weight:600;color:var(--color-primary);} /* e.g. "월 300만원" */
+.amount__unknown{width:100%;height:52px;border:none;border-top:1px solid var(--color-line);
+  background:transparent;font-size:15px;font-weight:600;color:var(--color-ink);} /* "잘 모르겠어요" → null */
+/* 0 vs unknown, side by side (used where 0 is a meaningful answer, e.g. carValue) */
+.amount__opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.amount__opt{height:50px;border:1.5px solid var(--color-line);background:var(--color-paper);
+  border-radius:var(--r-md);font-size:14px;font-weight:600;color:var(--color-ink);}
+
+/* =======================================================================
+   Definition help — inline, expand-in-place. NOT a hover tooltip
+   (no hover on touch; brief says don't hide important guidance).
+   ======================================================================= */
+.help__toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;
+  color:var(--color-primary);font-size:13px;font-weight:600;}
+.help__panel{margin-top:10px;background:var(--color-primary-tint);border-radius:var(--r-md);
+  padding:14px 15px;font-size:13px;color:var(--color-primary-dark);line-height:1.6;}
+.help__panel[hidden]{display:none;}
+.help__term{margin-top:8px;font-size:11.5px;color:var(--color-faint);} /* 원문 공고문 용어 */
+
+/* --- always-on guidance block (세대원 등 오입 잦은 항목) ---------------- */
+.guide{background:var(--color-primary-tint);border-radius:var(--r-md);padding:16px;}
+.guide__title{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);font-weight:700;
+  color:var(--color-primary-dark);margin-bottom:10px;}
+.guide__item{font-size:14px;color:var(--color-ink);line-height:1.5;}
+
+/* --- stepper ----------------------------------------------------------- */
+.stepper{display:flex;align-items:center;justify-content:space-between;
+  background:var(--color-paper);border:1px solid var(--color-line);border-radius:var(--r-lg);padding:22px;}
+.stepper__btn{width:52px;height:52px;border-radius:14px;border:1.5px solid var(--color-line);
+  background:var(--color-paper);font-size:26px;font-weight:600;color:var(--color-ink);}
+.stepper__btn--plus{border-color:var(--color-primary);background:var(--color-primary-tint);color:var(--color-primary-dark);}
+.stepper__value{font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1;text-align:center;}
+
+/* --- chips (profile "모름" etc.) --------------------------------------- */
+.chip{padding:4px 10px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:600;}
+.chip--unknown{background:var(--color-no-tint);color:var(--color-faint);} /* null / 미입력 */
+
+/* =======================================================================
+   Judgment badge + notice card
+   ======================================================================= */
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;color:#fff;}
+.badge--lh{background:var(--color-primary);} .badge--sh{background:var(--color-ok);}
+.badge--gh{background:#A9660E;} .badge--hug{background:#7A4E86;}
+
+.status{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:var(--r-pill);
+  font-size:var(--fs-sm);font-weight:700;}
+.status--ok{background:var(--color-ok-tint);color:var(--color-ok);}
+.status--review{background:var(--color-review-tint);color:var(--color-review);}
+.status--no{background:var(--color-no-tint);color:var(--color-muted);}
+
+.notice{padding:20px 22px;}
+.notice__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.notice__title{margin:0;font-size:var(--fs-h2);font-weight:700;line-height:1.45;}
+.notice__pdf{font-size:14px;font-weight:600;color:var(--color-primary);
+  display:inline-flex;align-items:center;gap:5px;} /* ALWAYS present on every result card */
+
+/* reason rows */
+.reason{border:1px solid var(--color-line);border-radius:var(--r-md);padding:14px;}
+.reason--missing{border-color:#D7DCEF;background:var(--color-review-tint);} /* user-fixable → distinct */
+.meter{height:8px;border-radius:var(--r-pill);background:var(--color-no-tint);position:relative;overflow:hidden;}
+.meter__fill{position:absolute;left:0;top:0;height:100%;background:var(--color-review);border-radius:var(--r-pill);}
+
+/* banner (aggregated "fill X to confirm Y") */
+.banner{background:var(--color-review-tint);border:1px solid #D7DCEF;border-radius:var(--r-lg);padding:16px 18px;}
+
+/* profile */
+.profile-grid{display:grid;grid-template-columns:1fr;gap:20px;}
+.section{background:var(--color-paper);border:1px solid var(--color-line);border-radius:14px;padding:6px 18px;}
+.section__title{font-size:var(--fs-xs);font-weight:700;color:var(--color-muted);letter-spacing:.02em;padding:15px 0 7px;}
+.prow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--color-line);}
+.prow__label{font-size:14px;color:var(--color-muted);} .prow__value{font-size:14px;font-weight:600;}
+
+/* =======================================================================
+   DESKTOP (>=768px)
+   ======================================================================= */
+@media (min-width:768px){
+  .app-nav{height:64px;padding:0 40px;}
+  .q-title{font-size:36px;line-height:1.3;letter-spacing:-.02em;}
+  .q-sub{font-size:16px;}
+  .amount__num input{font-size:40px;} .amount__unit{font-size:21px;} .amount__echo{font-size:16px;}
+
+  /* onboarding: vertically-centered single column */
+  .onboard{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:40px;}
+  .onboard__inner{width:560px;max-width:100%;}
+
+  /* result: cards + sticky rail */
+  .result-layout{display:grid;grid-template-columns:1fr 320px;gap:28px;align-items:start;}
+  .rail{position:sticky;top:88px;}
+
+  /* profile: two-column sections */
+  .profile-grid{grid-template-columns:1fr 1fr;}
+}

@@ -13,14 +13,15 @@
     "build": "npm run build --workspaces --if-present",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "lint": "oxlint apps packages",
-    "format": "prettier --write \"{apps,packages}/*/src/**/*.ts\"",
+    "format": "prettier --write \"{apps,packages}/*/src/**/*.{ts,tsx}\"",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "migration:generate": "npm run migration:generate -w @everyone-house/db",
     "migration:run": "npm run migration:run -w @everyone-house/db",
     "migration:revert": "npm run migration:revert -w @everyone-house/db",
     "lint:fix": "oxlint --fix apps packages",
-    "typecheck": "tsc -p packages/domain/tsconfig.test.json && tsc -p packages/db/tsconfig.test.json && tsc -p apps/crawler/tsconfig.test.json"
+    "typecheck": "tsc -p packages/domain/tsconfig.test.json && tsc -p packages/db/tsconfig.test.json && tsc -p apps/crawler/tsconfig.test.json && tsc -p apps/web/tsconfig.test.json",
+    "web:dev": "npm run dev -w @everyone-house/web"
   },
   "devDependencies": {
     "@nestjs/testing": "^12.0.4",
