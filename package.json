@@ -19,7 +19,8 @@
     "migration:generate": "npm run migration:generate -w @everyone-house/db",
     "migration:run": "npm run migration:run -w @everyone-house/db",
     "migration:revert": "npm run migration:revert -w @everyone-house/db",
-    "lint:fix": "oxlint --fix apps packages"
+    "lint:fix": "oxlint --fix apps packages",
+    "typecheck": "tsc -p packages/domain/tsconfig.test.json && tsc -p packages/db/tsconfig.test.json && tsc -p apps/crawler/tsconfig.test.json"
   },
   "devDependencies": {
     "@nestjs/testing": "^12.0.4",

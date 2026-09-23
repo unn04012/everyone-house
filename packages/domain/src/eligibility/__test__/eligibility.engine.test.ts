@@ -16,15 +16,23 @@ const buildNotice = () =>
 const buildProfile = (overrides: Partial<Omit<UserProfileSchema, 'profileId'>> = {}) =>
   UserProfileEntity.create({
     category: 'YOUTH',
+    personalIncome: 3_000_000,
+    personalAssets: 100_000_000,
     householdSize: 1,
-    monthlyIncome: 3_000_000,
-    totalAssets: 100_000_000,
+    householdIncome: 3_000_000,
+    householdAssets: 100_000_000,
+    parentsIncome: null,
+    parentsAssets: null,
+    livesWithParents: false,
     carValue: 10_000_000,
     isHomeless: true,
     age: 29,
     maritalStatus: 'SINGLE',
     isDualIncome: false,
     childrenBirthDates: [],
+    isBasicLivingBeneficiary: false,
+    isSecondLowestIncome: false,
+    isSupportedSingleParent: false,
     residence: { province: '서울특별시', district: '관악구' },
     districtMovedInAt: null,
     incomeSourceLocation: null,
@@ -51,39 +59,73 @@ describe('EligibilityEngine', () => {
     expect(result.reasons.length).toBeGreaterThan(0);
   });
 
-  test('공고문 금액표에서 가구원수에 맞는 상한을 찾는다', () => {
-    // 4인 가구 100% = 8,802,202원
-    const within = engine.judge(buildProfile({ householdSize: 4, monthlyIncome: 8_000_000 }), buildNotice());
-    const over = engine.judge(buildProfile({ householdSize: 4, monthlyIncome: 9_583_000 }), buildNotice());
+  test('범위에 따라 다른 소득과 다른 가구원수 기준을 쓴다', () => {
+    // 같은 사람: 본인 458만 / 세대합산 958만, 4인 가구
+    const profile = buildProfile({
+      personalIncome: 4_583_333,
+      householdIncome: 9_583_333,
+      householdSize: 4,
+      householdAssets: 100_000_000,
+    });
 
-    expect(within.verdict).toBe('LIKELY_ELIGIBLE');
-    expect(over.verdict).toBe('NOT_ELIGIBLE');
-    expect(codes(over)).toContain('INCOME_OVER_LIMIT');
+    // 청년(SELF) → 1인 기준 4,576,036 과 비교 → 7,297원 초과로 경계
+    const asSelf = engine.judge(profile, buildNotice(), '청년');
+    // 세대 전원(HOUSEHOLD) → 4인 기준 8,802,202 과 비교 → 명확히 초과
+    const asHousehold = new EligibilityEngine({
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], applicantScope: 'HOUSEHOLD' }],
+    }).judge(profile, buildNotice(), '청년');
+
+    expect(asSelf.verdict).toBe('NEEDS_REVIEW');
+    expect(asHousehold.verdict).toBe('NOT_ELIGIBLE');
+    expect(codes(asHousehold)).toContain('INCOME_OVER_LIMIT');
+  });
+
+  test('세대주 여부로 범위가 갈리는 공고 (SELF_IF_NOT_HOUSEHOLDER)', () => {
+    const criteria = {
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], applicantScope: 'SELF_IF_NOT_HOUSEHOLDER' as const }],
+    };
+    const engineByHouseholder = new EligibilityEngine(criteria);
+    const finances = { personalIncome: 4_000_000, householdIncome: 9_583_333, householdSize: 4, householdAssets: 100_000_000 };
+
+    const asMember = engineByHouseholder.judge(buildProfile({ ...finances, livesWithParents: true }), buildNotice());
+    const asHouseholder = engineByHouseholder.judge(buildProfile({ ...finances, livesWithParents: false }), buildNotice());
+
+    expect(asMember.verdict).toBe('LIKELY_ELIGIBLE'); // 본인 400만 < 1인 기준 457만
+    expect(asHouseholder.verdict).toBe('NOT_ELIGIBLE'); // 세대 958만 > 4인 기준 880만
+  });
+
+  test('본인+부모 범위인데 부모 소득을 모르면 NEEDS_REVIEW', () => {
+    const result = engine.judge(buildProfile({ parentsIncome: null }), buildNotice(), '대학생');
+
+    expect(result.verdict).toBe('NEEDS_REVIEW');
+    expect(codes(result)).toContain('MISSING_PROFILE_DATA');
   });
 
   test('상한을 5% 넘게 초과하면 NOT_ELIGIBLE', () => {
     // 1인 상한 4,576,036 × 1.05 = 4,804,838
-    const result = engine.judge(buildProfile({ monthlyIncome: 5_000_000 }), buildNotice());
+    const result = engine.judge(buildProfile({ personalIncome: 5_000_000 }), buildNotice());
 
     expect(result.verdict).toBe('NOT_ELIGIBLE');
   });
 
   test('경계(±5%) 안이면 초과해도 NEEDS_REVIEW — 실제 사례 7,297원', () => {
-    const result = engine.judge(buildProfile({ monthlyIncome: 4_583_333 }), buildNotice());
+    const result = engine.judge(buildProfile({ personalIncome: 4_583_333 }), buildNotice());
 
     expect(result.verdict).toBe('NEEDS_REVIEW');
     expect(codes(result)).toContain('BORDERLINE');
   });
 
   test('경계 아래쪽(상한 직전)도 NEEDS_REVIEW', () => {
-    const result = engine.judge(buildProfile({ monthlyIncome: 4_500_000 }), buildNotice());
+    const result = engine.judge(buildProfile({ personalIncome: 4_500_000 }), buildNotice());
 
     expect(result.verdict).toBe('NEEDS_REVIEW');
     expect(codes(result)).toContain('BORDERLINE');
   });
 
   test('경계에 있어도 확정 미달 사유가 있으면 NOT_ELIGIBLE 이 우선한다', () => {
-    const result = engine.judge(buildProfile({ monthlyIncome: 4_583_333, totalAssets: 300_000_000 }), buildNotice());
+    const result = engine.judge(buildProfile({ personalIncome: 4_583_333, personalAssets: 300_000_000 }), buildNotice());
 
     expect(result.verdict).toBe('NOT_ELIGIBLE');
     expect(codes(result)).toContain('ASSETS_OVER_LIMIT');
@@ -105,22 +147,22 @@ describe('EligibilityEngine', () => {
   });
 
   test('총자산 미입력(null)은 0 이 아니라 NEEDS_REVIEW', () => {
-    const result = engine.judge(buildProfile({ totalAssets: null }), buildNotice());
+    const result = engine.judge(buildProfile({ personalAssets: null }), buildNotice());
 
     expect(result.verdict).toBe('NEEDS_REVIEW');
     expect(codes(result)).toContain('MISSING_PROFILE_DATA');
   });
 
   test('프로필 계층에 맞는 기준을 고른다 (대학생은 자산 상한이 낮다)', () => {
-    const asStudent = engine.judge(buildProfile({ category: 'UNIVERSITY_STUDENT', totalAssets: 150_000_000 }), buildNotice());
-    const asYouth = engine.judge(buildProfile({ category: 'YOUTH', totalAssets: 150_000_000 }), buildNotice());
+    const asStudent = engine.judge(buildProfile({ category: 'UNIVERSITY_STUDENT', personalAssets: 108_000_000, parentsIncome: 1_000_000, parentsAssets: 50_000_000 }), buildNotice());
+    const asYouth = engine.judge(buildProfile({ category: 'YOUTH', personalAssets: 150_000_000 }), buildNotice());
 
     expect(asStudent.verdict).toBe('NOT_ELIGIBLE'); // 대학생 상한 1억 800만
     expect(asYouth.verdict).toBe('LIKELY_ELIGIBLE'); // 청년 상한 2억 5,100만
   });
 
   test('계층 라벨을 직접 지정할 수 있다', () => {
-    const result = engine.judge(buildProfile({ totalAssets: 150_000_000 }), buildNotice(), '대학생');
+    const result = engine.judge(buildProfile({ personalAssets: 108_000_000, parentsIncome: 1_000_000, parentsAssets: 50_000_000 }), buildNotice(), '대학생');
 
     expect(result.verdict).toBe('NOT_ELIGIBLE');
   });
@@ -133,7 +175,12 @@ describe('EligibilityEngine', () => {
   });
 
   test('금액표에 없는 가구원수는 추정하지 않고 NEEDS_REVIEW', () => {
-    const result = engine.judge(buildProfile({ householdSize: 7 }), buildNotice());
+    // 금액표는 5인까지만 있다. 대가구는 별도 가산 규칙이 붙어 임의 확장이 위험하다.
+    const householdEngine = new EligibilityEngine({
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], applicantScope: 'HOUSEHOLD' }],
+    });
+    const result = householdEngine.judge(buildProfile({ householdSize: 7, householdIncome: 5_000_000, householdAssets: 100_000_000 }), buildNotice());
 
     expect(result.verdict).toBe('NEEDS_REVIEW');
     expect(codes(result)).toContain('NO_RULE_DATA');

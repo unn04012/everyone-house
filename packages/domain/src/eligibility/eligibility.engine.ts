@@ -1,10 +1,18 @@
 import type { CategoryRule, IncomeTableRow, NoticeCriteria } from '../criteria/criteria.types.js';
 import type { NoticeEntity } from '../notice/domain/notice.entity.js';
+import type { ApplicantScope } from '../profile/domain/profile.types.js';
 import type { UserProfileEntity } from '../profile/domain/user-profile.entity.js';
 import type { JudgeReason, JudgeResult, Verdict } from './eligibility.types.js';
 
 /** 개별 기준 검사 결과. UNKNOWN 은 데이터가 없어 판단을 보류한 것이다. */
 type CheckOutcome = 'OK' | 'BLOCKED' | 'BORDERLINE' | 'UNKNOWN';
+
+/** 공고가 요구하는 범위로 해석된 소득·자산. */
+interface ScopedFinances {
+  income: number;
+  assets: number | null;
+  householdSize: number;
+}
 
 /**
  * 자격 자동 1차 필터. 확정 판정이 아니다. (SPEC §7)
@@ -51,12 +59,22 @@ export class EligibilityEngine {
       return this._result('NOT_ELIGIBLE', ruleset, [{ code: 'NOT_HOMELESS', message: '무주택 요건을 충족하지 않습니다.' }]);
     }
 
+    const scoped = profile.resolveScope(category.applicantScope);
+    if (!scoped) {
+      return this._result('NEEDS_REVIEW', ruleset, [
+        {
+          code: 'MISSING_PROFILE_DATA',
+          message: `이 공고는 ${this._scopeLabel(category.applicantScope)} 기준으로 심사하는데, 해당 소득·자산 정보가 없습니다.`,
+        },
+      ]);
+    }
+
     const reasons: JudgeReason[] = [];
     const outcomes = [
-      this._checkIncome(profile, category, reasons),
+      this._checkIncome(scoped, category, reasons),
       this._checkLimit({
         label: '총자산',
-        value: profile.totalAssets,
+        value: scoped.assets,
         limit: category.totalAssetsLimit,
         overCode: 'ASSETS_OVER_LIMIT',
         withinCode: 'ASSETS_WITHIN_LIMIT',
@@ -88,14 +106,8 @@ export class EligibilityEngine {
     return this._result(needsReview ? 'NEEDS_REVIEW' : 'LIKELY_ELIGIBLE', ruleset, reasons);
   }
 
-  /**
-   * 소득 상한을 공고문 금액표에서 찾는다.
-   *
-   * 청년 계층이 세대원인 경우처럼 '본인만' 보는 규칙이 있으나, 세대주 여부를
-   * 프로필이 알지 못하므로 여기서는 프로필의 가구원수를 그대로 쓴다.
-   * 이 차이는 manualCheckNotes 로 사용자에게 전달된다.
-   */
-  private _checkIncome(profile: UserProfileEntity, category: CategoryRule, reasons: JudgeReason[]): CheckOutcome {
+  /** 소득 상한을 공고문 금액표에서 찾는다. 가구원수는 공고가 요구하는 범위를 따른다. */
+  private _checkIncome(scoped: ScopedFinances, category: CategoryRule, reasons: JudgeReason[]): CheckOutcome {
     const percent = category.urbanWorkerIncomePercent ?? category.medianIncomePercent;
     const basis = category.urbanWorkerIncomePercent !== null ? 'URBAN_WORKER_AVERAGE' : 'MEDIAN_INCOME';
 
@@ -104,18 +116,18 @@ export class EligibilityEngine {
       return 'UNKNOWN';
     }
 
-    const limit = this._lookupIncomeLimit(percent, basis, profile.householdSize);
+    const limit = this._lookupIncomeLimit(percent, basis, scoped.householdSize);
     if (limit === null) {
       reasons.push({
         code: 'NO_RULE_DATA',
-        message: `공고문 소득표에 ${profile.householdSize}인 가구의 ${percent}% 금액이 없어 소득 비교를 건너뛰었습니다.`,
+        message: `공고문 소득표에 ${scoped.householdSize}인 가구의 ${percent}% 금액이 없어 소득 비교를 건너뛰었습니다.`,
       });
       return 'UNKNOWN';
     }
 
     return this._compareWithBuffer({
-      label: `월소득(${percent}% 기준)`,
-      value: profile.monthlyIncome,
+      label: `월소득(${this._scopeLabel(category.applicantScope)} ${scoped.householdSize}인 ${percent}% 기준)`,
+      value: scoped.income,
       limit,
       overCode: 'INCOME_OVER_LIMIT',
       withinCode: 'INCOME_WITHIN_LIMIT',
@@ -242,6 +254,19 @@ export class EligibilityEngine {
   /** 판정 근거의 출처. 재현을 위해 공고 + 추출 모델을 함께 남긴다. */
   private _rulesetVersion(notice: NoticeEntity): string {
     return `notice:${notice.sourceId}:${notice.externalId}`;
+  }
+
+  private _scopeLabel(scope: ApplicantScope): string {
+    switch (scope) {
+      case 'SELF':
+        return '본인';
+      case 'SELF_AND_PARENTS':
+        return '본인+부모';
+      case 'HOUSEHOLD':
+        return '세대 전원';
+      default:
+        return '세대주 여부에 따름';
+    }
   }
 
   private _won(amount: number): string {

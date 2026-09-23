@@ -16,22 +16,49 @@ export class UserProfileOrmEntity {
   @Column({ type: 'enum', enum: ApplicantCategoryEnum })
   category!: ApplicantCategory;
 
-  // ── 자격 판정 ──
+  // ── 본인 기준 ──
+  @Column({ type: 'bigint', name: 'personal_income', transformer: wonTransformer })
+  personalIncome!: number;
+
+  /** null 은 '미입력'이다. 0 으로 저장하면 자산 초과자를 통과시킨다. */
+  @Column({ type: 'bigint', name: 'personal_assets', nullable: true, transformer: wonTransformer })
+  personalAssets!: number | null;
+
+  // ── 세대 기준 ──
   @Column({ type: 'int', name: 'household_size' })
   householdSize!: number;
 
-  @Column({ type: 'bigint', name: 'monthly_income', transformer: wonTransformer })
-  monthlyIncome!: number;
+  @Column({ type: 'bigint', name: 'household_income', transformer: wonTransformer })
+  householdIncome!: number;
 
-  /** null 은 '미입력'이다. 0 으로 저장하면 자산 초과자를 통과시킨다. */
-  @Column({ type: 'bigint', name: 'total_assets', nullable: true, transformer: wonTransformer })
-  totalAssets!: number | null;
+  @Column({ type: 'bigint', name: 'household_assets', nullable: true, transformer: wonTransformer })
+  householdAssets!: number | null;
+
+  @Column({ type: 'bigint', name: 'parents_income', nullable: true, transformer: wonTransformer })
+  parentsIncome!: number | null;
+
+  @Column({ type: 'bigint', name: 'parents_assets', nullable: true, transformer: wonTransformer })
+  parentsAssets!: number | null;
+
+  /** 부모와 같은 세대인가(= 세대주가 아닌가). 청년 계층 판정을 가른다 */
+  @Column({ type: 'boolean', name: 'lives_with_parents', default: false })
+  livesWithParents!: boolean;
 
   @Column({ type: 'bigint', name: 'car_value', nullable: true, transformer: wonTransformer })
   carValue!: number | null;
 
   @Column({ type: 'boolean', name: 'is_homeless' })
   isHomeless!: boolean;
+
+  // ── 우선공급 1순위 조건 ──
+  @Column({ type: 'boolean', name: 'is_basic_living_beneficiary', default: false })
+  isBasicLivingBeneficiary!: boolean;
+
+  @Column({ type: 'boolean', name: 'is_second_lowest_income', default: false })
+  isSecondLowestIncome!: boolean;
+
+  @Column({ type: 'boolean', name: 'is_supported_single_parent', default: false })
+  isSupportedSingleParent!: boolean;
 
   @Column({ type: 'int' })
   age!: number;

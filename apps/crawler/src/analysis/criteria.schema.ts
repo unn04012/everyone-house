@@ -16,6 +16,14 @@ export const rankRuleSchema = z.object({
 
 export const categoryRuleSchema = z.object({
   categoryLabel: z.string().describe("공고문 표기 그대로의 계층명. 예: '청년', '신혼부부'"),
+  applicantScope: z
+    .enum(['SELF', 'SELF_AND_PARENTS', 'HOUSEHOLD', 'SELF_IF_NOT_HOUSEHOLDER'])
+    .describe(
+      "소득·자산을 누구 기준으로 보는지. 공고문 문구를 그대로 따른다. " +
+        "'본인의 월평균 소득' → SELF. '본인과 부모의' → SELF_AND_PARENTS. " +
+        "'해당 세대의'(무주택세대구성원 전원) → HOUSEHOLD. " +
+        "'세대주인 경우 전원, 세대원인 경우 본인만' → SELF_IF_NOT_HOUSEHOLDER",
+    ),
   urbanWorkerIncomePercent: z.number().nullable().describe('전년도 도시근로자 가구원수별 월평균소득 기준 %. 아니면 null'),
   medianIncomePercent: z.number().nullable().describe('기준 중위소득 기준 %. 아니면 null'),
   totalAssetsLimit: z.number().nullable().describe('총자산 상한 (원 단위 정수). 예: 2억5100만 → 251000000'),

@@ -24,24 +24,62 @@ export enum ApplicantCategoryEnum {
 }
 export type ApplicantCategory = keyof typeof ApplicantCategoryEnum;
 
+/**
+ * 소득·자산을 누구 기준으로 보는가.
+ *
+ * 같은 사람이라도 공고마다 적용 범위가 다르다. 실제 공고문 문구:
+ *   SELF              "본인의 월평균 소득이 … 1인 가구 월평균소득 100% 이하"
+ *   SELF_AND_PARENTS  "본인과 부모의 월평균 소득이 … 100% 이하"
+ *   HOUSEHOLD         "해당 세대의 월평균 소득이 … (무주택세대구성원 전원)"
+ *
+ * 행복주택 청년 계층처럼 "세대주면 전원, 세대원이면 본인만" 인 경우도 있어
+ * livesWithParents 로 분기한다.
+ */
+export enum ApplicantScopeEnum {
+  SELF = 'SELF',
+  SELF_AND_PARENTS = 'SELF_AND_PARENTS',
+  HOUSEHOLD = 'HOUSEHOLD',
+  /** 세대주면 HOUSEHOLD, 세대원이면 SELF */
+  SELF_IF_NOT_HOUSEHOLDER = 'SELF_IF_NOT_HOUSEHOLDER',
+}
+export type ApplicantScope = keyof typeof ApplicantScopeEnum;
+
 /** 자격 판정 입력. 금액 단위는 모두 '원'. */
 export interface UserProfileSchema {
   profileId: string;
   category: ApplicantCategory;
 
-  // ── 자격(pass/fail) 판정용 ──
+  // ── 본인 기준 ──
+  /** 본인 세전 월소득 (원) */
+  personalIncome: number;
+  /** 본인 총자산 (원). **모르면 null** — 0 으로 두면 자산 초과자를 통과시킨다 */
+  personalAssets: number | null;
+
+  // ── 세대 기준 ──
   householdSize: number;
-  /** 세전 월소득 합계 (원) */
-  monthlyIncome: number;
-  /**
-   * 총자산 (원). **모르면 null** — 0 으로 두면 자산 초과자를 통과시킨다.
-   * null 이면 판정은 NEEDS_REVIEW 로 떨어진다.
-   */
-  totalAssets: number | null;
-  /** 자동차가액 (원). 무차량이면 0, **모르면 null** */
+  /** 세대 전원의 세전 월소득 합계 (원) */
+  householdIncome: number;
+  /** 세대 전원의 총자산 (원). 모르면 null */
+  householdAssets: number | null;
+  /** 부모의 월소득 합계 (원). '본인+부모' 범위 판정에 쓴다. 모르면 null */
+  parentsIncome: number | null;
+  /** 부모의 총자산 (원). 모르면 null */
+  parentsAssets: number | null;
+  /** 부모와 같은 세대인가(= 본인이 세대주가 아닌가). 청년 계층 판정을 가른다 */
+  livesWithParents: boolean;
+
+  /** 자동차가액 (원). 무차량이면 0, **모르면 null**. 세대에 2대 이상이면 가장 높은 값 */
   carValue: number | null;
   isHomeless: boolean;
   age: number;
+
+  // ── 우선공급 1순위 조건 (매입·전세임대 등) ──
+  /** 「국민기초생활보장법」 수급자 가구 */
+  isBasicLivingBeneficiary: boolean;
+  /** 차상위계층 가구 */
+  isSecondLowestIncome: boolean;
+  /** 「한부모가족 지원법」 지원대상 한부모가족 */
+  isSupportedSingleParent: boolean;
   maritalStatus: MaritalStatus;
   /** 맞벌이 여부. 신혼부부 소득 상한이 100% → 120% 로 확장된다 */
   isDualIncome: boolean;

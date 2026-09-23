@@ -1,4 +1,5 @@
 import type { IncomeBasis } from '../eligibility/eligibility.types.js';
+import type { ApplicantScope } from '../profile/domain/profile.types.js';
 
 /**
  * 공고문에서 추출한 자격·순위 기준.
@@ -45,6 +46,12 @@ export interface RankRule {
 export interface CategoryRule {
   /** 공고문 표기 그대로. 예: '청년', '대학생', '신혼부부', '고령자' */
   categoryLabel: string;
+  /**
+   * 소득·자산을 누구 기준으로 보는가. 공고문에 명시돼 있다 —
+   * "본인의 월평균 소득이", "본인과 부모의", "해당 세대의(세대주면 전원, 세대원이면 본인만)".
+   * 이 값이 없으면 어느 소득과 비교해야 할지 알 수 없어 판정이 불가능하다.
+   */
+  applicantScope: ApplicantScope;
   /** 도시근로자 월평균소득 기준 % (예: 100, 120). 중위소득 기준이면 medianIncomePercent 사용 */
   urbanWorkerIncomePercent: number | null;
   medianIncomePercent: number | null;

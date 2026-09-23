@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Location } from './location.js';
-import type { ApplicantCategory, MaritalStatus, UserProfileSchema } from './profile.types.js';
+import type { ApplicantCategory, ApplicantScope, MaritalStatus, UserProfileSchema } from './profile.types.js';
 
 export class UserProfileEntity {
   private static readonly MILLIS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
@@ -9,11 +9,19 @@ export class UserProfileEntity {
   private readonly _profileId: string;
 
   private _category: ApplicantCategory;
+  private _personalIncome: number;
+  private _personalAssets: number | null;
   private _householdSize: number;
-  private _monthlyIncome: number;
-  private _totalAssets: number | null;
+  private _householdIncome: number;
+  private _householdAssets: number | null;
+  private _parentsIncome: number | null;
+  private _parentsAssets: number | null;
+  private _livesWithParents: boolean;
   private _carValue: number | null;
   private _isHomeless: boolean;
+  private _isBasicLivingBeneficiary: boolean;
+  private _isSecondLowestIncome: boolean;
+  private _isSupportedSingleParent: boolean;
   private _age: number;
   private _maritalStatus: MaritalStatus;
   private _isDualIncome: boolean;
@@ -31,17 +39,41 @@ export class UserProfileEntity {
   get category() {
     return this._category;
   }
+  get personalIncome() {
+    return this._personalIncome;
+  }
+  get personalAssets() {
+    return this._personalAssets;
+  }
   get householdSize() {
     return this._householdSize;
   }
-  get monthlyIncome() {
-    return this._monthlyIncome;
+  get householdIncome() {
+    return this._householdIncome;
   }
-  get totalAssets() {
-    return this._totalAssets;
+  get householdAssets() {
+    return this._householdAssets;
+  }
+  get parentsIncome() {
+    return this._parentsIncome;
+  }
+  get parentsAssets() {
+    return this._parentsAssets;
+  }
+  get livesWithParents() {
+    return this._livesWithParents;
   }
   get carValue() {
     return this._carValue;
+  }
+  get isBasicLivingBeneficiary() {
+    return this._isBasicLivingBeneficiary;
+  }
+  get isSecondLowestIncome() {
+    return this._isSecondLowestIncome;
+  }
+  get isSupportedSingleParent() {
+    return this._isSupportedSingleParent;
   }
   get isHomeless() {
     return this._isHomeless;
@@ -77,11 +109,19 @@ export class UserProfileEntity {
   private constructor(schema: UserProfileSchema) {
     this._profileId = schema.profileId;
     this._category = schema.category;
+    this._personalIncome = schema.personalIncome;
+    this._personalAssets = schema.personalAssets;
     this._householdSize = schema.householdSize;
-    this._monthlyIncome = schema.monthlyIncome;
-    this._totalAssets = schema.totalAssets;
+    this._householdIncome = schema.householdIncome;
+    this._householdAssets = schema.householdAssets;
+    this._parentsIncome = schema.parentsIncome;
+    this._parentsAssets = schema.parentsAssets;
+    this._livesWithParents = schema.livesWithParents;
     this._carValue = schema.carValue;
     this._isHomeless = schema.isHomeless;
+    this._isBasicLivingBeneficiary = schema.isBasicLivingBeneficiary;
+    this._isSecondLowestIncome = schema.isSecondLowestIncome;
+    this._isSupportedSingleParent = schema.isSupportedSingleParent;
     this._age = schema.age;
     this._maritalStatus = schema.maritalStatus;
     this._isDualIncome = schema.isDualIncome;
@@ -111,11 +151,19 @@ export class UserProfileEntity {
     return {
       profileId: this._profileId,
       category: this._category,
+      personalIncome: this._personalIncome,
+      personalAssets: this._personalAssets,
       householdSize: this._householdSize,
-      monthlyIncome: this._monthlyIncome,
-      totalAssets: this._totalAssets,
+      householdIncome: this._householdIncome,
+      householdAssets: this._householdAssets,
+      parentsIncome: this._parentsIncome,
+      parentsAssets: this._parentsAssets,
+      livesWithParents: this._livesWithParents,
       carValue: this._carValue,
       isHomeless: this._isHomeless,
+      isBasicLivingBeneficiary: this._isBasicLivingBeneficiary,
+      isSecondLowestIncome: this._isSecondLowestIncome,
+      isSupportedSingleParent: this._isSupportedSingleParent,
       age: this._age,
       maritalStatus: this._maritalStatus,
       isDualIncome: this._isDualIncome,
@@ -126,6 +174,43 @@ export class UserProfileEntity {
       universityLocation: this._universityLocation?.getLocation() ?? null,
       housingSubscriptionPayments: this._housingSubscriptionPayments,
     };
+  }
+
+  /**
+   * 공고가 요구하는 범위의 소득·자산을 돌려준다.
+   *
+   * 같은 사람이라도 공고마다 적용 범위가 다르다 — 본인만 보면 1인 가구 기준과,
+   * 세대 전원을 보면 해당 가구원수 기준과 비교해야 한다.
+   * 필요한 값이 없으면 null 을 돌려주고, 판정은 NEEDS_REVIEW 로 간다.
+   */
+  public resolveScope(scope: ApplicantScope): { income: number; assets: number | null; householdSize: number } | null {
+    switch (scope) {
+      case 'SELF':
+        return { income: this._personalIncome, assets: this._personalAssets, householdSize: 1 };
+
+      case 'HOUSEHOLD':
+        return { income: this._householdIncome, assets: this._householdAssets, householdSize: this._householdSize };
+
+      case 'SELF_AND_PARENTS': {
+        if (this._parentsIncome === null) {
+          return null;
+        }
+        const assets = this._personalAssets === null || this._parentsAssets === null ? null : this._personalAssets + this._parentsAssets;
+        // 본인+부모의 가구원수는 별도로 묻지 않는다. 세대 가구원수로 근사한다.
+        return { income: this._personalIncome + this._parentsIncome, assets, householdSize: this._householdSize };
+      }
+
+      case 'SELF_IF_NOT_HOUSEHOLDER':
+        return this._livesWithParents ? this.resolveScope('SELF') : this.resolveScope('HOUSEHOLD');
+
+      default:
+        return null;
+    }
+  }
+
+  /** 수급자·차상위·한부모 중 하나라도 해당하는가. 매입·전세임대 우선공급 1순위 조건이다. */
+  public hasPrioritySupportStatus(): boolean {
+    return this._isBasicLivingBeneficiary || this._isSecondLowestIncome || this._isSupportedSingleParent;
   }
 
   /**

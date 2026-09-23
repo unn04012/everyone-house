@@ -11,6 +11,7 @@ export const happyHouseCriteria: NoticeCriteria = {
   categories: [
     {
       categoryLabel: '청년',
+      applicantScope: 'SELF',
       urbanWorkerIncomePercent: 100,
       medianIncomePercent: null,
       totalAssetsLimit: 251_000_000,
@@ -22,6 +23,7 @@ export const happyHouseCriteria: NoticeCriteria = {
     },
     {
       categoryLabel: '대학생',
+      applicantScope: 'SELF_AND_PARENTS',
       urbanWorkerIncomePercent: 100,
       medianIncomePercent: null,
       totalAssetsLimit: 108_000_000,
