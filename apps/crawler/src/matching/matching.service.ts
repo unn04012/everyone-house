@@ -36,7 +36,15 @@ export class MatchingService {
     const result: MatchingResult = { judged: 0, worthNotifying: 0, skipped: 0 };
     const matches: MatchEntity[] = [];
 
+    const asOf = new Date();
+
     for (const notice of notices) {
+      // 마감된 공고는 알림 대상이 아니다. 판정 결과를 남겨도 쓸 곳이 없다.
+      if (!notice.isStillApplicable(asOf)) {
+        result.skipped += 1;
+        continue;
+      }
+
       const criteria = await this._criteriaRepository.findByNoticeId(notice.noticeId);
 
       // 분석은 끝났다고 표시됐는데 기준이 없으면 판정할 수 없다.

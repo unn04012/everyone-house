@@ -50,6 +50,18 @@ export class NoticeRepositoryPostgres implements INoticeRepository {
     return rows.map((row) => this._mapRowToEntity(row));
   }
 
+  public async skipClosedAnalysis(asOf: Date): Promise<number> {
+    const result = await this._repository
+      .createQueryBuilder()
+      .update()
+      .set({ analysisStatus: 'SKIPPED' })
+      .where('analysis_status = :pending', { pending: 'PENDING' })
+      .andWhere('(status = :closed OR closes_at < :asOf)', { closed: 'CLOSED', asOf })
+      .execute();
+
+    return result.affected ?? 0;
+  }
+
   public async updateAnalysisStatus(noticeId: string, status: AnalysisStatus, attempts: number): Promise<void> {
     await this._repository.update({ noticeId }, { analysisStatus: status, analysisAttempts: attempts });
   }

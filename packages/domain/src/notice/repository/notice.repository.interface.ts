@@ -27,4 +27,10 @@ export interface INoticeRepository {
 
   /** 분석이 끝난 공고. 판정 대상이다. */
   findAnalyzed(): Promise<NoticeEntity[]>;
+
+  /**
+   * 이미 마감된 공고를 분석 대상에서 제외한다.
+   * 알림 가치가 없을뿐더러 공고문 분석은 건당 비용이 든다.
+   */
+  skipClosedAnalysis(asOf: Date): Promise<number>;
 }

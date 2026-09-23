@@ -182,4 +182,20 @@ export class NoticeEntity {
   public isOpen(): boolean {
     return this._status === 'OPEN';
   }
+
+  /**
+   * 아직 신청할 수 있는가 (모집중이거나 모집예정).
+   *
+   * 마감된 공고는 알릴 가치가 없고, 공고문을 분석할 가치도 없다 —
+   * 분석은 건당 비용이 드는 작업이라 여기서 거르는 게 가장 크게 절약된다.
+   *
+   * 마감일을 모르면(SH 목록에는 접수 마감일이 없다) 상태 표기만으로 판단하고,
+   * 둘 다 모르면 신청 가능한 것으로 본다 — 유효한 공고를 버리는 쪽이 더 나쁘다.
+   */
+  public isStillApplicable(asOf: Date): boolean {
+    if (this._status === 'CLOSED') {
+      return false;
+    }
+    return this._closesAt === null || this._closesAt.getTime() >= asOf.getTime();
+  }
 }

@@ -58,6 +58,12 @@ export class CrawlerService {
       this._logger.log(`관심 밖 공고 ${skipped}건을 분석 대상에서 제외`);
     }
 
+    // 마감된 공고는 알릴 수도 없고 분석 비용만 든다.
+    const closed = await this._noticeRepository.skipClosedAnalysis(new Date());
+    if (closed > 0) {
+      this._logger.log(`마감된 공고 ${closed}건을 분석 대상에서 제외`);
+    }
+
     const totalNew = outcomes.reduce((sum, outcome) => sum + outcome.newNotices.length, 0);
     this._logger.log(`수집 완료 — 신규 ${totalNew}건`);
 
