@@ -91,6 +91,31 @@ export interface IncomeTableRow {
   appliesTo: string | null;
 }
 
+/**
+ * 공급 단위 하나. 공고문의 '임대 대상 및 금액' 표 한 행에 대응한다.
+ *
+ * 목록 API 로는 알 수 없는 정보다 — 어느 단지에 몇 ㎡ 가 얼마에 나오는지가 있어야
+ * 사용자가 신청 여부를 판단할 수 있다. 같은 공고에서도 계층·면적별로 조건이 다르다.
+ */
+export interface SupplyUnit {
+  /** 단지명. 모르면 빈 문자열 */
+  complexName: string;
+  /** 시군구·자치구 */
+  district: string;
+  /** 공급유형 면적 (㎡). 모르면 0 */
+  areaType: number;
+  /** 어느 계층 몫인가. 예: '신혼부부', '청년(소득있음)' */
+  supplyCategory: string;
+  /** 공급 호수 */
+  totalUnits: number;
+  /** 임대보증금 (원) */
+  deposit: number;
+  /** 월임대료 (원) */
+  monthlyRent: number;
+  /** 입주 시작 예정 */
+  moveInFrom: string;
+}
+
 export interface NoticeCriteria {
   /** 접수 시작·종료일 (YYYY-MM-DD). 목록에 마감일이 없는 SH 공고는 여기서만 얻을 수 있다 */
   applicationStartDate: string | null;
@@ -101,6 +126,8 @@ export interface NoticeCriteria {
   ranks: RankRule[];
   /** 공고문에 실린 가구원수별 소득 금액표. 없으면 빈 배열 */
   incomeTable: IncomeTableRow[];
+  /** '임대 대상 및 금액' 표. 단지·면적·보증금·월세. 없으면 빈 배열 */
+  supplyUnits: SupplyUnit[];
   /** 자동 판정이 어려운 조건. 사용자에게 그대로 보여준다 */
   manualCheckNotes: string[];
   /** 추출 실패·불확실 항목 */

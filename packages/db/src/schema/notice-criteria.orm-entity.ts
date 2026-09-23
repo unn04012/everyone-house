@@ -36,6 +36,10 @@ export class NoticeCriteriaOrmEntity {
   @Column({ type: 'jsonb', name: 'income_table' })
   incomeTable!: unknown;
 
+  /** SupplyUnit[] — 단지·면적·보증금·월세. 목록 API 로는 알 수 없는 정보다 */
+  @Column({ type: 'jsonb', name: 'supply_units', default: () => "'[]'::jsonb" })
+  supplyUnits!: unknown;
+
   /** string[] */
   @Column({ type: 'jsonb', name: 'manual_check_notes' })
   manualCheckNotes!: unknown;

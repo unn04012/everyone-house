@@ -1,9 +1,9 @@
-import type { NoticeCriteria, NoticeCriteriaRecord } from '@everyone-house/domain';
+import type { NoticeCriteria, NoticeCriteriaRecord, SupplyUnit } from '@everyone-house/domain';
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { Injectable, Logger } from '@nestjs/common';
 import { AnthropicConfigService } from '../config/anthropic/anthropic-config.service.js';
-import { noticeCriteriaSchema } from './criteria.schema.js';
+import { noticeCriteriaSchema, supplyUnitsSchema } from './criteria.schema.js';
 
 /**
  * 공고문 PDF 텍스트에서 자격·순위 기준을 추출한다.
@@ -21,6 +21,9 @@ export class NoticeAnalyzer {
   /** 단가 (USD per 1M tokens). 비용을 눈으로 확인하기 위한 값이다. */
   private static readonly INPUT_USD_PER_MTOK = 4;
   private static readonly OUTPUT_USD_PER_MTOK = 20;
+  /** 캐시 쓰기 1.25배, 읽기는 0.05배 (Opus 5.5) */
+  private static readonly CACHE_WRITE_USD_PER_MTOK = 5;
+  private static readonly CACHE_READ_USD_PER_MTOK = 0.2;
   /**
    * 추출은 정형 작업이라 최고 수준의 추론이 필요하지 않다.
    * thinking 출력은 입력의 5배 단가라 effort 를 낮추는 것이 비용에 가장 크게 작용한다.
@@ -40,6 +43,8 @@ export class NoticeAnalyzer {
     '- 계층(대학생/청년/신혼부부/고령자 등)마다 소득·자산 기준이 다르면 각각 별도 항목으로 만든다.',
     '- 소득 기준이 "도시근로자 월평균소득"인지 "기준 중위소득"인지 구분해 해당 필드에만 넣는다.',
     '- 나이·거주요건처럼 서술이 복잡해 기계 판정이 어려운 조건은 manualCheckNotes 에 원문에 가깝게 남긴다.',
+    "- '임대 대상 및 금액' 표가 있으면 supplyUnits 에 행 단위로 옮긴다. 단지·면적·계층마다 보증금과 월세가 달라 사용자가 신청 여부를 판단하는 핵심 정보다.",
+    '  보증금이 천원 단위로 적혀 있으면 원 단위로 환산한다(120,960천원 → 120960000).',
     '- 수급자·차상위계층·지원대상 한부모가족만 신청할 수 있는 계층이면 requiresSupportStatus 를 true 로 둔다.',
     '- 계층마다 applicantScope 를 반드시 채운다. 소득·자산을 본인만 보는지, 본인+부모인지, 세대 전원인지가 공고문에 적혀 있다.',
     '  같은 공고 안에서도 순위마다 다를 수 있다(예: 2순위는 본인+부모, 3순위는 본인만) — 그럴 땐 계층을 나눠 각각 만든다.',
@@ -58,13 +63,20 @@ export class NoticeAnalyzer {
   public async analyze({ noticeId, sourceFileName, documentText }: { noticeId: string; sourceFileName: string; documentText: string }): Promise<NoticeCriteriaRecord> {
     this._logger.log(`공고문 분석 시작: ${sourceFileName} (${documentText.length.toLocaleString('ko-KR')}자)`);
 
+    // 두 번 나눠 뽑는다 — 한 스키마에 합치면 구조화 출력 문법이 한계를 넘는다.
+    // 두 번째 호출은 같은 문서를 쓰므로 프롬프트 캐시에 걸려 입력 비용이 거의 들지 않는다.
     const { criteria, usage } = await this._extract(documentText);
+    const { supplyUnits, usage: supplyUsage } = await this._extractSupplyUnits(documentText);
 
-    this._logger.log(`분석 완료: 계층 ${criteria.categories.length}개, 순위 ${criteria.ranks.length}개, 불확실 ${criteria.uncertainNotes.length}건`);
+    this._logger.log(
+      `분석 완료: 계층 ${criteria.categories.length}개, 순위 ${criteria.ranks.length}개, 공급 ${supplyUnits.length}건, 불확실 ${criteria.uncertainNotes.length}건`,
+    );
     this._logUsage(usage);
+    this._logUsage(supplyUsage);
 
     return {
       ...criteria,
+      supplyUnits,
       noticeId,
       model: NoticeAnalyzer.MODEL,
       extractedAt: new Date().toISOString(),
@@ -79,12 +91,18 @@ export class NoticeAnalyzer {
    */
   private _logUsage(usage: Anthropic.Usage): void {
     const thinking = usage.output_tokens_details?.thinking_tokens ?? 0;
+    const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+    const cacheRead = usage.cache_read_input_tokens ?? 0;
     const cost =
-      (usage.input_tokens * NoticeAnalyzer.INPUT_USD_PER_MTOK + usage.output_tokens * NoticeAnalyzer.OUTPUT_USD_PER_MTOK) / 1_000_000;
+      (usage.input_tokens * NoticeAnalyzer.INPUT_USD_PER_MTOK +
+        cacheWrite * NoticeAnalyzer.CACHE_WRITE_USD_PER_MTOK +
+        cacheRead * NoticeAnalyzer.CACHE_READ_USD_PER_MTOK +
+        usage.output_tokens * NoticeAnalyzer.OUTPUT_USD_PER_MTOK) /
+      1_000_000;
 
     this._logger.log(
-      `사용량: 입력 ${usage.input_tokens.toLocaleString('ko-KR')} / 출력 ${usage.output_tokens.toLocaleString('ko-KR')}` +
-        `(thinking ${thinking.toLocaleString('ko-KR')}) → 약 $${cost.toFixed(3)}`,
+      `사용량: 입력 ${usage.input_tokens.toLocaleString('ko-KR')} (캐시 쓰기 ${cacheWrite.toLocaleString('ko-KR')} / 읽기 ${cacheRead.toLocaleString('ko-KR')})` +
+        ` / 출력 ${usage.output_tokens.toLocaleString('ko-KR')}(thinking ${thinking.toLocaleString('ko-KR')}) → 약 $${cost.toFixed(3)}`,
     );
   }
 
@@ -95,12 +113,7 @@ export class NoticeAnalyzer {
       thinking: { type: 'adaptive' },
       output_config: { effort: NoticeAnalyzer.EFFORT, format: zodOutputFormat(noticeCriteriaSchema) },
       system: NoticeAnalyzer.SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `다음은 공공임대주택 모집공고문 전문입니다. 신청 자격과 순위 기준을 추출하세요.\n\n---\n${documentText}`,
-        },
-      ],
+      messages: [this._documentMessage('신청 자격과 순위 기준을 추출하세요.', documentText)],
     });
 
     if (!response.parsed_output) {
@@ -108,5 +121,36 @@ export class NoticeAnalyzer {
     }
 
     return { criteria: response.parsed_output as NoticeCriteria, usage: response.usage };
+  }
+
+  private async _extractSupplyUnits(documentText: string): Promise<{ supplyUnits: SupplyUnit[]; usage: Anthropic.Usage }> {
+    const response = await this._client.messages.parse({
+      model: NoticeAnalyzer.MODEL,
+      max_tokens: NoticeAnalyzer.MAX_TOKENS,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: NoticeAnalyzer.EFFORT, format: zodOutputFormat(supplyUnitsSchema) },
+      system: NoticeAnalyzer.SYSTEM_PROMPT,
+      messages: [this._documentMessage("'임대 대상 및 금액' 표를 행 단위로 추출하세요.", documentText)],
+    });
+
+    if (!response.parsed_output) {
+      throw new Error('공급 정보를 파싱하지 못했습니다');
+    }
+
+    return { supplyUnits: (response.parsed_output as { supplyUnits: SupplyUnit[] }).supplyUnits, usage: response.usage };
+  }
+
+  /**
+   * 문서를 캐시 가능한 블록으로 둔다 — 지시문이 뒤에 와야 문서 prefix 가 동일해져
+   * 두 번째 호출이 캐시에 걸린다.
+   */
+  private _documentMessage(instruction: string, documentText: string): Anthropic.MessageParam {
+    return {
+      role: 'user',
+      content: [
+        { type: 'text', text: `다음은 공공임대주택 모집공고문 전문입니다.\n\n---\n${documentText}`, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: instruction },
+      ],
+    };
   }
 }

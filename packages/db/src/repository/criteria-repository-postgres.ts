@@ -1,4 +1,4 @@
-import type { CategoryRule, ICriteriaRepository, IncomeTableRow, NoticeCriteriaRecord, RankRule } from '@everyone-house/domain';
+import type { CategoryRule, ICriteriaRepository, IncomeTableRow, NoticeCriteriaRecord, RankRule, SupplyUnit } from '@everyone-house/domain';
 import type { DataSource, Repository } from 'typeorm';
 import { NoticeCriteriaOrmEntity } from '../schema/notice-criteria.orm-entity.js';
 
@@ -24,6 +24,7 @@ export class CriteriaRepositoryPostgres implements ICriteriaRepository {
         categories: record.categories,
         ranks: record.ranks,
         incomeTable: record.incomeTable,
+        supplyUnits: record.supplyUnits,
         manualCheckNotes: record.manualCheckNotes,
         uncertainNotes: record.uncertainNotes,
         model: record.model,
@@ -45,6 +46,7 @@ export class CriteriaRepositoryPostgres implements ICriteriaRepository {
       categories: (row.categories as CategoryRule[] | null) ?? [],
       ranks: (row.ranks as RankRule[] | null) ?? [],
       incomeTable: (row.incomeTable as IncomeTableRow[] | null) ?? [],
+      supplyUnits: (row.supplyUnits as SupplyUnit[] | null) ?? [],
       manualCheckNotes: (row.manualCheckNotes as string[] | null) ?? [],
       uncertainNotes: (row.uncertainNotes as string[] | null) ?? [],
       model: row.model,

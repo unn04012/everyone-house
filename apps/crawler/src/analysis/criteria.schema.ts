@@ -51,6 +51,17 @@ export const incomeTableRowSchema = z.object({
   appliesTo: z.string().nullable().describe("이 행이 적용되는 대상. 예: '공통', '맞벌이 신혼부부'. 구분이 없으면 null"),
 });
 
+export const supplyUnitSchema = z.object({
+  complexName: z.string().describe("단지명. 모르면 빈 문자열. 예: '창경궁롯데캐슬시그니처(삼선5)'"),
+  district: z.string().describe("자치구·시군구. 모르면 빈 문자열. 예: '성북구'"),
+  areaType: z.number().describe('공급유형 면적(㎡). 모르면 0. 예: 39'),
+  supplyCategory: z.string().describe("이 행이 어느 계층 몫인지. 예: '신혼부부', '청년(소득있음)', '고령자'"),
+  totalUnits: z.number().int().describe('공급 호수(계). 모르면 0'),
+  deposit: z.number().describe('임대보증금을 **원 단위 정수**로. 표가 천원 단위면 1000 을 곱한다(120,960천원 → 120960000). 모르면 0'),
+  monthlyRent: z.number().describe('월임대료(원). 모르면 0'),
+  moveInFrom: z.string().describe("입주 시작 예정. 'YYYY-MM' 로, 어려우면 원문 표현 그대로. 모르면 빈 문자열"),
+});
+
 export const noticeCriteriaSchema = z.object({
   applicationStartDate: z.string().nullable().describe('접수 시작일 YYYY-MM-DD. 모르면 null'),
   applicationEndDate: z.string().nullable().describe('접수 종료일 YYYY-MM-DD. 모르면 null'),
@@ -62,4 +73,18 @@ export const noticeCriteriaSchema = z.object({
     .describe('공고문에 실린 가구원수별 소득 금액표를 그대로 옮긴다. 표의 금액에는 1인 +20%p, 2인 +10%p 가산이 이미 반영돼 있으므로 다시 계산하지 말고 적힌 숫자를 그대로 쓴다. 표가 없으면 빈 배열'),
   manualCheckNotes: z.array(z.string()).describe('자동 판정이 어려워 사람이 확인해야 하는 조건'),
   uncertainNotes: z.array(z.string()).describe('공고문에서 찾지 못했거나 확신이 서지 않는 항목'),
+});
+
+/**
+ * 공급 정보는 별도 호출로 뽑는다.
+ * 한 스키마에 합치면 구조화 출력의 문법이 한계를 넘어 400 이 난다
+ * ("The compiled grammar is too large"). 문서는 프롬프트 캐시로 재사용한다.
+ */
+export const supplyUnitsSchema = z.object({
+  supplyUnits: z
+    .array(supplyUnitSchema)
+    .describe(
+      "'임대 대상 및 금액' 표의 각 행을 옮긴다. 단지·면적·계층별로 보증금과 월세가 다르므로 행을 합치지 말 것. " +
+        '표가 없으면 빈 배열. 재공급·예비 물량 표가 따로 있으면 그것도 포함한다',
+    ),
 });
