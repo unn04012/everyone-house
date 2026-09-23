@@ -6,9 +6,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "crawl": "npm run build && node dist/entry/main.js"
+    "crawl": "npm run build && node dist/entry/main.js",
+    "analyze:samples": "npm run build && node dist/entry/analyze-samples.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@everyone-house/db": "*",
     "@everyone-house/domain": "*",
     "@nestjs/common": "^12.0.4",
@@ -18,6 +20,7 @@
     "node-html-parser": "^9.0.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "typeorm": "^1.1.1"
+    "typeorm": "^1.1.1",
+    "zod": "^4.6.5"
   }
 }

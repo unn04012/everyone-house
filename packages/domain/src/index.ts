@@ -15,3 +15,6 @@ export * from './profile/domain/profile.types.js';
 export { EligibilityEngine } from './eligibility/eligibility.engine.js';
 export * from './eligibility/eligibility.types.js';
 export { EligibilityTable2026 } from './eligibility/tables/2026.js';
+
+// criteria (공고문 추출)
+export * from './criteria/criteria.types.js';
