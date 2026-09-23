@@ -7,6 +7,7 @@ import { SourceConfigModule } from './config/source/source-config.module.js';
 import { CrawlerService } from './crawler.service.js';
 import { DatabaseModule } from './database.module.js';
 import { HttpClient } from './http/http-client.js';
+import { GhApplyAdapter } from './sources/gh-apply.adapter.js';
 import { MyhomeApiAdapter } from './sources/myhome-api.adapter.js';
 import { MyhomeDetailAdapter } from './sources/myhome-detail.adapter.js';
 import { ShDetailAdapter } from './sources/sh-detail.adapter.js';
@@ -23,10 +24,15 @@ import { Symbols } from './symbols.js';
     ShDetailAdapter,
     MyhomeApiAdapter,
     MyhomeDetailAdapter,
+    GhApplyAdapter,
     {
       provide: Symbols.sourceAdapters,
-      useFactory: (shPortalAdapter: ShPortalAdapter, myhomeApiAdapter: MyhomeApiAdapter): ISourceAdapter[] => [shPortalAdapter, myhomeApiAdapter],
-      inject: [ShPortalAdapter, MyhomeApiAdapter],
+      useFactory: (shPortalAdapter: ShPortalAdapter, myhomeApiAdapter: MyhomeApiAdapter, ghApplyAdapter: GhApplyAdapter): ISourceAdapter[] => [
+        shPortalAdapter,
+        myhomeApiAdapter,
+        ghApplyAdapter,
+      ],
+      inject: [ShPortalAdapter, MyhomeApiAdapter, GhApplyAdapter],
     },
     {
       provide: Symbols.noticeRepository,

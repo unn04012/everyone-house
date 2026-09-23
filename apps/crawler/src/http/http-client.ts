@@ -20,6 +20,24 @@ export class HttpClient {
     });
   }
 
+  /** 폼 POST 로 HTML 을 받는다. GH 는 목록 페이지네이션·상세가 모두 POST 다. */
+  public async postHtml(url: string, params: Record<string, string>): Promise<string> {
+    return await this._withRetry(url, async () => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'user-agent': HttpClient.USER_AGENT,
+          accept: 'text/html,application/xhtml+xml',
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(params).toString(),
+        signal: AbortSignal.timeout(HttpClient.TIMEOUT_MS),
+      });
+      this._assertOk(response);
+      return await response.text();
+    });
+  }
+
   public async fetchJson<T>(url: string): Promise<T> {
     return await this._withRetry(url, async () => {
       const response = await fetch(url, {

@@ -11,4 +11,6 @@ export default registerAs('source', () => ({
   myhomeApiUrl: process.env.MYHOME_API_URL,
   myhomeDetailUrlPrefix: process.env.MYHOME_DETAIL_URL_PREFIX,
   myhomeDownloadUrl: process.env.MYHOME_DOWNLOAD_URL,
+  ghListUrl: process.env.GH_LIST_URL,
+  ghDetailUrl: process.env.GH_DETAIL_URL,
 }));

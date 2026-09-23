@@ -9,4 +9,6 @@ export const sourceValidationSchema = Joi.object({
   MYHOME_API_URL: requiredUrl,
   MYHOME_DETAIL_URL_PREFIX: requiredUrl,
   MYHOME_DOWNLOAD_URL: requiredUrl,
+  GH_LIST_URL: requiredUrl,
+  GH_DETAIL_URL: requiredUrl,
 });

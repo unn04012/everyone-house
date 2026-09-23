@@ -28,4 +28,12 @@ export class SourceConfigService {
   get myhomeDownloadUrl(): string {
     return this._configService.getOrThrow<string>('source.myhomeDownloadUrl');
   }
+
+  get ghListUrl(): string {
+    return this._configService.getOrThrow<string>('source.ghListUrl');
+  }
+
+  get ghDetailUrl(): string {
+    return this._configService.getOrThrow<string>('source.ghDetailUrl');
+  }
 }
