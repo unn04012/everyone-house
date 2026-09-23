@@ -45,19 +45,28 @@ export class NoticeRepositoryPostgres implements INoticeRepository {
     return rows.map((row) => this._mapRowToEntity(row));
   }
 
+  public async findAnalyzed(): Promise<NoticeEntity[]> {
+    const rows = await this._repository.find({ where: { analysisStatus: 'ANALYZED' }, order: { postedAt: 'DESC' } });
+    return rows.map((row) => this._mapRowToEntity(row));
+  }
+
   public async updateAnalysisStatus(noticeId: string, status: AnalysisStatus, attempts: number): Promise<void> {
     await this._repository.update({ noticeId }, { analysisStatus: status, analysisAttempts: attempts });
   }
 
-  public async skipAnalysisExcept(supplyTypes: readonly string[]): Promise<number> {
-    const result = await this._repository
+  public async skipAnalysisExcept(supplyTypes: readonly string[], titleKeywords: readonly string[]): Promise<number> {
+    const query = this._repository
       .createQueryBuilder()
       .update()
       .set({ analysisStatus: 'SKIPPED' })
       .where('analysis_status = :pending', { pending: 'PENDING' })
-      .andWhere('supply_type NOT IN (:...types)', { types: supplyTypes })
-      .execute();
+      .andWhere('supply_type NOT IN (:...types)', { types: supplyTypes });
 
+    for (const [index, keyword] of titleKeywords.entries()) {
+      query.andWhere(`title NOT ILIKE :keyword${index}`, { [`keyword${index}`]: `%${keyword}%` });
+    }
+
+    const result = await query.execute();
     return result.affected ?? 0;
   }
 

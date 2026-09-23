@@ -1,5 +1,6 @@
 import type { INoticeRepository, NoticeEntity, SourceId } from '@everyone-house/domain';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { AppConfigService } from './config/app/app-config.service.js';
 import type { IAttachmentResolver, ISourceAdapter } from './sources/source.adapter.interface.js';
 import { Symbols } from './symbols.js';
 
@@ -31,6 +32,7 @@ export class CrawlerService {
   constructor(
     @Inject(Symbols.sourceAdapters) private readonly _sourceAdapters: ISourceAdapter[],
     @Inject(Symbols.noticeRepository) private readonly _noticeRepository: INoticeRepository,
+    private readonly _appConfig: AppConfigService,
   ) {}
 
   public async runCrawl(): Promise<CrawlResult> {
@@ -49,6 +51,12 @@ export class CrawlerService {
             error: String(result.reason),
           },
     );
+
+    // 관심 없는 유형은 분석 큐에서 빼 둔다. 공고문 한 건 읽는 데 드는 비용이 적지 않다.
+    const skipped = await this._noticeRepository.skipAnalysisExcept(this._appConfig.interestedSupplyTypes, this._appConfig.interestedTitleKeywords);
+    if (skipped > 0) {
+      this._logger.log(`관심 밖 공고 ${skipped}건을 분석 대상에서 제외`);
+    }
 
     const totalNew = outcomes.reduce((sum, outcome) => sum + outcome.newNotices.length, 0);
     this._logger.log(`수집 완료 — 신규 ${totalNew}건`);

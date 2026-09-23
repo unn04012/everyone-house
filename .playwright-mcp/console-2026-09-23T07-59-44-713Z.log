@@ -1,8 +1,0 @@
-[     823ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/cheongyak/rule-set/knowledge-level:0
-[     825ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/users/me:0
-[     860ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/cheongyak/rule-set/user-information:0
-[     860ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/promotion/referral-code-event-winner:0
-[     906ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v2/cheongyak/gongo/sgg-related-cheongyak-with-condition:0
-[     907ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/user-agreement/%EB%A7%88%EC%BC%80%ED%8C%85_%EC%88%98%EC%8B%A0:0
-[     907ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/ums/in-app-notifications:0
-[   78989ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://savehome.kr/_next/static/chunks/:0

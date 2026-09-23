@@ -1,2 +1,0 @@
-[     444ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/cheongyak/rule-set/user-information:0
-[   65696ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.savehome.kr/v1/users/me:0

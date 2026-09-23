@@ -18,6 +18,13 @@ export interface INoticeRepository {
 
   updateAnalysisStatus(noticeId: string, status: AnalysisStatus, attempts: number): Promise<void>;
 
-  /** 관심 없는 유형을 분석 대상에서 제외한다 (LLM 비용 절감). */
-  skipAnalysisExcept(supplyTypes: readonly string[]): Promise<number>;
+  /**
+   * 관심 없는 공고를 분석 대상에서 제외한다 (LLM 비용 절감).
+   * 유형이 OTHER 로 분류돼도 제목에 키워드가 있으면 남긴다 —
+   * 소스마다 유형 표기가 달라 정규화에서 새는 공고가 있다.
+   */
+  skipAnalysisExcept(supplyTypes: readonly string[], titleKeywords: readonly string[]): Promise<number>;
+
+  /** 분석이 끝난 공고. 판정 대상이다. */
+  findAnalyzed(): Promise<NoticeEntity[]>;
 }
