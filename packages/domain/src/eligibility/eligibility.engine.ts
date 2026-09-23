@@ -33,6 +33,9 @@ export class EligibilityEngine {
    */
   private static readonly BORDERLINE_RATIO = 0.05;
 
+  /** 계층명에서 '수급자 전용' 을 알아보는 단서 */
+  private static readonly SUPPORT_STATUS_HINTS = ['수급자', '차상위', '한부모'];
+
   private readonly _criteria: NoticeCriteria;
 
   constructor(criteria: NoticeCriteria) {
@@ -57,6 +60,14 @@ export class EligibilityEngine {
 
     if (category.requiresHomeless && !profile.isHomeless) {
       return this._result('NOT_ELIGIBLE', ruleset, [{ code: 'NOT_HOMELESS', message: '무주택 요건을 충족하지 않습니다.' }]);
+    }
+
+    // 수급자 전용 계층은 소득·자산 기준이 따로 없는 경우가 많아, 검사할 게 없으면
+    // 통과처럼 보인다. 해당자가 아니면 신청 자체가 안 되므로 먼저 걸러낸다.
+    if (this._requiresSupportStatus(category) && !profile.hasPrioritySupportStatus()) {
+      return this._result('NOT_ELIGIBLE', ruleset, [
+        { code: 'NOT_SUPPORT_TARGET', message: '수급자·차상위계층·지원대상 한부모가족만 신청할 수 있는 계층입니다.' },
+      ]);
     }
 
     const scoped = profile.resolveScope(category.applicantScope);
@@ -254,6 +265,14 @@ export class EligibilityEngine {
   /** 판정 근거의 출처. 재현을 위해 공고 + 추출 모델을 함께 남긴다. */
   private _rulesetVersion(notice: NoticeEntity): string {
     return `notice:${notice.sourceId}:${notice.externalId}`;
+  }
+
+  /** 추출본에 값이 없으면(구 데이터) 계층명에서 추론한다. */
+  private _requiresSupportStatus(category: CategoryRule): boolean {
+    if (typeof category.requiresSupportStatus === 'boolean') {
+      return category.requiresSupportStatus;
+    }
+    return EligibilityEngine.SUPPORT_STATUS_HINTS.some((hint) => category.categoryLabel.includes(hint));
   }
 
   private _scopeLabel(scope: ApplicantScope): string {

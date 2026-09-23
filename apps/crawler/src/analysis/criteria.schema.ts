@@ -29,6 +29,9 @@ export const categoryRuleSchema = z.object({
   totalAssetsLimit: z.number().nullable().describe('총자산 상한 (원 단위 정수). 예: 2억5100만 → 251000000'),
   carValueLimit: z.number().nullable().describe('자동차가액 상한 (원 단위 정수)'),
   requiresHomeless: z.boolean().describe('무주택 요건이 있는가'),
+  requiresSupportStatus: z
+    .boolean()
+    .describe('수급자·차상위계층·지원대상 한부모가족만 신청할 수 있는 계층인가. 매입·전세임대 1순위가 대표적이다'),
   minAge: z.number().int().nullable(),
   maxAge: z.number().int().nullable(),
   maritalRequirement: z.string().nullable().describe("혼인 관련 제약. 예: '혼인 중이 아닐 것'. 없으면 null"),

@@ -19,6 +19,8 @@ export enum ReasonCodeEnum {
   CAR_WITHIN_LIMIT = 'CAR_WITHIN_LIMIT',
   CAR_OVER_LIMIT = 'CAR_OVER_LIMIT',
   NOT_HOMELESS = 'NOT_HOMELESS',
+  /** 수급자·차상위·한부모 지원대상 전용 계층인데 해당하지 않음 */
+  NOT_SUPPORT_TARGET = 'NOT_SUPPORT_TARGET',
   /** 기준표에 해당 유형·가구원수 데이터가 없어 판정 불가 */
   NO_RULE_DATA = 'NO_RULE_DATA',
   /** 프로필에 값이 없어 판정 불가 (미입력과 0 은 다르다) */

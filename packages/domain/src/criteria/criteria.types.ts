@@ -59,6 +59,14 @@ export interface CategoryRule {
   totalAssetsLimit: number | null;
   carValueLimit: number | null;
   requiresHomeless: boolean;
+  /**
+   * 수급자·차상위·한부모 지원대상만 신청할 수 있는 계층인가.
+   *
+   * 매입·전세임대 1순위가 대표적이다. 이 계층은 소득·자산 기준이 따로 없는 경우가 많아
+   * (자격 자체가 요건이라) 검사할 게 없으면 통과처럼 보인다 — 실제로는 해당자가 아니면
+   * 신청조차 못 한다. 추출본에 값이 없으면 계층명에서 추론한다(구 데이터 호환).
+   */
+  requiresSupportStatus?: boolean;
   minAge: number | null;
   maxAge: number | null;
   /** 혼인 관련 제약. 예: '혼인 중이 아닐 것' */

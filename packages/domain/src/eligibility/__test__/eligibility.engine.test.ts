@@ -131,6 +131,39 @@ describe('EligibilityEngine', () => {
     expect(codes(result)).toContain('ASSETS_OVER_LIMIT');
   });
 
+  test('수급자 전용 계층은 해당자가 아니면 NOT_ELIGIBLE', () => {
+    // 이 계층은 소득·자산 기준이 따로 없어, 걸러내지 않으면 통과처럼 보인다.
+    const criteria = {
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], categoryLabel: '청년 1순위 (수급자 가구·차상위계층)', requiresSupportStatus: true }],
+    };
+    const result = new EligibilityEngine(criteria).judge(buildProfile(), buildNotice());
+
+    expect(result.verdict).toBe('NOT_ELIGIBLE');
+    expect(codes(result)).toContain('NOT_SUPPORT_TARGET');
+  });
+
+  test('수급자면 그 계층으로 판정이 진행된다', () => {
+    const criteria = {
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], requiresSupportStatus: true }],
+    };
+    const result = new EligibilityEngine(criteria).judge(buildProfile({ isBasicLivingBeneficiary: true }), buildNotice());
+
+    expect(result.verdict).toBe('LIKELY_ELIGIBLE');
+  });
+
+  test('추출본에 값이 없으면 계층명에서 추론한다 (구 데이터 호환)', () => {
+    const criteria = {
+      ...happyHouseCriteria,
+      categories: [{ ...happyHouseCriteria.categories[0], categoryLabel: '청년 1순위 (지원대상 한부모가족)' }],
+    };
+    const result = new EligibilityEngine(criteria).judge(buildProfile(), buildNotice());
+
+    expect(result.verdict).toBe('NOT_ELIGIBLE');
+    expect(codes(result)).toContain('NOT_SUPPORT_TARGET');
+  });
+
   test('무주택이 아니면 다른 기준을 보지 않고 NOT_ELIGIBLE', () => {
     const result = engine.judge(buildProfile({ isHomeless: false }), buildNotice());
 
