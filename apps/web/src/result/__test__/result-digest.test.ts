@@ -66,14 +66,4 @@ describe('ResultDigest', () => {
 
     expect(digest.topMissingField).toBeNull();
   });
-
-  test('집계는 항상 적합 → 확인 필요 → 미해당 순서로 낸다', () => {
-    const digest = ResultDigest.from([MatchFixture.create('a', VerdictEnum.NOT_ELIGIBLE), MatchFixture.create('b', VerdictEnum.LIKELY_ELIGIBLE)], 2);
-
-    expect(digest.tally).toEqual([
-      { verdict: VerdictEnum.LIKELY_ELIGIBLE, count: 1 },
-      { verdict: VerdictEnum.NEEDS_REVIEW, count: 0 },
-      { verdict: VerdictEnum.NOT_ELIGIBLE, count: 1 },
-    ]);
-  });
 });

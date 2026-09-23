@@ -21,6 +21,30 @@ export class Deadline {
     return `마감 D-${days}`;
   }
 
+  /** 남은 일수. 마감일을 모르면 null */
+  public static daysLeft(closesAt: string | null, now: Date = new Date()): number | null {
+    if (!closesAt) {
+      return null;
+    }
+    const closes = new Date(closesAt);
+    if (Number.isNaN(closes.getTime())) {
+      return null;
+    }
+    return Math.ceil((closes.getTime() - now.getTime()) / Deadline.DAY_MS);
+  }
+
+  /** 숫자로 크게 그릴 때 쓰는 짧은 표기. 'D-5' · '오늘' · '마감' */
+  public static shortLabel(closesAt: string | null, now: Date = new Date()): string | null {
+    const days = Deadline.daysLeft(closesAt, now);
+    if (days === null) {
+      return null;
+    }
+    if (days < 0) {
+      return '마감';
+    }
+    return days === 0 ? '오늘' : `D-${days}`;
+  }
+
   /** 사흘 안쪽이면 강조한다 */
   public static isUrgent(closesAt: string | null, now: Date = new Date()): boolean {
     if (!closesAt) {

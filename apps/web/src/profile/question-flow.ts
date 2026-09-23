@@ -104,7 +104,7 @@ export class QuestionFlow {
       max: 10,
       guide: {
         title: '이렇게 세어 주세요',
-        items: ['주민등록등본에 함께 올라 있는 사람만 세요.', '본인을 포함해요 — 혼자 살면 1명이에요.', '따로 사는 가족(주소가 다른 부모·형제)은 빼요.'],
+        items: ['주민등록등본에 함께 올라 있는 사람만 세요.', '본인을 포함해요. 혼자 살면 1명이에요.', '따로 사는 가족(주소가 다른 부모·형제)은 빼요.'],
       },
     },
     {
@@ -202,7 +202,7 @@ export class QuestionFlow {
       zeroLabel: '차가 없어요 · 0원',
       help: {
         label: '어떤 금액을 적나요?',
-        body: '산 가격이 아니라 보험개발원이 매년 내는 차량기준가액이에요. 모르면 비워 두셔도 돼요 — 0원과는 다르게 저장돼요.',
+        body: '산 가격이 아니라 보험개발원이 매년 내는 차량기준가액이에요. 모르면 비워 두셔도 돼요. 0원과는 다르게 저장돼요.',
         term: "공고문 용어: '자동차가액(보험개발원 차량기준가액)'",
       },
     },
@@ -233,7 +233,7 @@ export class QuestionFlow {
       appliesWhen: (values) => values.category === ApplicantCategoryEnum.UNIVERSITY_STUDENT || values.category === ApplicantCategoryEnum.YOUTH,
       help: {
         label: '무엇까지 더하나요?',
-        body: '부모님 명의의 부동산·금융자산·자동차를 더하고 부채를 뺀 값이에요. 정확히 모르면 비워 두셔도 돼요 — 확인 필요로만 남아요.',
+        body: '부모님 명의의 부동산·금융자산·자동차를 더하고 부채를 뺀 값이에요. 정확히 모르면 비워 두셔도 돼요. 확인 필요로만 남아요.',
         term: "공고문 용어: '본인과 부모의 총자산가액'",
       },
     },

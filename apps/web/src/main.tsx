@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
 import './styles/app.css';
 import './styles/layout.css';
+import './styles/theme.css';
 
 // 엔트리는 얇게. 부작용은 렌더 하나뿐이다.
 const container = document.getElementById('root');

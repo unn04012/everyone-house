@@ -13,3 +13,6 @@ docs/prompts.local.md
 
 # 브라우저 조사 도구가 남기는 스냅샷 (저장소에 둘 이유 없음)
 .playwright-mcp/
+
+# 디자이너 핸드오프 원본 — 로컬에만 둔다
+apps/web/HANDOFF.md

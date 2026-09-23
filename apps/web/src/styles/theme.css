@@ -1,0 +1,287 @@
+/* =========================================================================
+   테마 — "화면에서 색을 갖는 건 판정뿐"
+
+   핸드오프(app.css)의 구조·클래스는 그대로 두고 토큰과 표면 처리만 덮어쓴다.
+   이 파일 하나를 빼면 원래 핸드오프 모습으로 즉시 돌아간다.
+
+   왜 이렇게 바꾸는가
+   - 회색 바탕 + 흰 둥근 카드 + 부드러운 그림자는 어느 제품에나 붙는 기본 껍데기다.
+     그 셋을 걷어내고 얇은 선과 여백으로 면을 나눈다.
+   - 브랜드색을 파랑에서 잉크(거의 검정)로 내린다. 그러면 화면에 남는 유일한
+     채도는 판정 3색이 된다 — 이 제품이 실제로 전달해야 하는 정보다.
+   - 숫자(금액·마감)는 Plex Mono 로. 자릿수가 맞아 읽기 쉽고, 같은 활자가족이라
+     톤이 흐트러지지 않는다.
+
+   지키는 제품 규칙: 3단계 판정 / '확인 필요'는 경고색 아님(인디고) / 미해당은 저채도 회색.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* 면 — 그림자 대신 선과 바탕 차이로 나눈다 */
+  --color-ground: #eaeae5;
+  --color-paper: #ffffff;
+  --color-line: #d7d8d1;
+
+  /* 글자 — 기존보다 한 단계 더 진하게. 대비를 확보하고 인상을 또렷하게 */
+  --color-ink: #101418;
+  --color-muted: #545a63;
+  --color-faint: #9aa0a8;
+
+  /* 액션 — 브랜드색을 잉크로 내린다. 버튼은 검정, 링크는 밑줄 */
+  --color-primary: #101418;
+  --color-primary-dark: #000000;
+  --color-primary-tint: #ecede9;
+
+  /* 판정 — 화면에서 유일하게 채도를 갖는 자리 */
+  --color-ok: #1b6b45;
+  --color-ok-tint: #e3eee8;
+  --color-review: #3c4a96;
+  --color-review-tint: #e8eaf6;
+  --color-no: #8a8f98;
+  --color-no-tint: #e6e6e1;
+
+  /* 모서리 — 16px 라운드를 걷어낸다. pill 은 판정 칩에만 남는다 */
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
+
+  --shadow-card: none;
+
+  --font-num: 'IBM Plex Mono', 'IBM Plex Sans KR', system-ui, sans-serif;
+  /* 바탕이 어두워진 만큼 보조 글자도 함께 내린다
+     (paper 5.68:1 · ground 4.70:1 · no-tint 4.53:1 — 전부 WCAG AA) */
+  --color-faint-text: #63676f;
+}
+
+/* --- 표면: 그림자 제거, 선으로 나눈다 ----------------------------------- */
+.card,
+.section,
+.stepper,
+.amount {
+  box-shadow: none;
+}
+.btn,
+.stepper__btn,
+.badge,
+.skeleton-line {
+  border-radius: var(--r-md);
+}
+.section {
+  border-radius: var(--r-lg);
+}
+.guide,
+.help__panel,
+.notice__summary,
+.passed__item,
+.stat,
+.reason-fix,
+.banner {
+  border-radius: var(--r-md);
+}
+.status,
+.chip {
+  border-radius: var(--r-pill);
+}
+
+/* --- 링크: 색이 아니라 밑줄로 구분한다 ---------------------------------- */
+a,
+.notice__pdf,
+.help__toggle,
+.crit__link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+.app-nav a,
+.brand,
+.choice,
+.notice__title a {
+  text-decoration: none;
+}
+
+/* --- 출처 뱃지: 채운 색 대신 테두리. 판정 초록과 헷갈리지 않게 ---------- */
+.badge {
+  background: transparent;
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* --- 숫자: 모노는 '숫자만 있는 자리'에만 ------------------------------
+   한글이 섞인 줄에 모노를 걸면 모노의 넓은 공백 글리프가 띄어쓰기를 벌린다.
+   섞인 줄은 활자를 그대로 두고 자릿수 정렬(tabular-nums)만 켠다. */
+.dday-col__value,
+.stepper__value,
+.amount__num input,
+.dday {
+  font-family: var(--font-num);
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+.reason-row__values,
+.basis__row dd,
+.stat__v,
+.crit__vals,
+.t-date,
+.amount__echo {
+  font-variant-numeric: tabular-nums;
+}
+.amount__num input {
+  font-weight: 500;
+}
+
+/* --- 제목: 자간을 더 조여 인상을 또렷하게 ------------------------------ */
+.q-title,
+.d-title,
+.notice__title,
+.subhead h1 {
+  letter-spacing: -0.025em;
+}
+
+/* --- 카드: 판정을 왼쪽 선으로만 전달, 신청 가능은 테두리까지 -------- */
+.notice--ok {
+  box-shadow: inset 3px 0 0 var(--color-ok);
+  border-color: #bcd6c8;
+}
+.notice--review {
+  box-shadow: inset 3px 0 0 var(--color-review);
+}
+.notice--no {
+  box-shadow: inset 3px 0 0 var(--color-no);
+  background: transparent;
+}
+
+/* --- 브랜드 마크: 채운 파랑 대신 잉크 ---------------------------------- */
+.brand__mark {
+  border-radius: var(--r-sm);
+}
+.app-nav {
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* =========================================================================
+   VISUAL_DENSITY 2 — "Art Gallery" (taste 스킬 §7)
+   여백이 위계를 만든다. 선을 더 긋는 대신 간격을 벌린다.
+   DESIGN_VARIANCE 5 / MOTION_INTENSITY 3 과 함께 읽을 것.
+   ========================================================================= */
+
+body {
+  line-height: 1.6;
+}
+
+/* 페이지 머리 — 제목이 숨 쉴 자리를 준다 */
+.subhead .container {
+  padding-top: 44px;
+  padding-bottom: 36px;
+}
+.subhead h1 {
+  margin-bottom: 10px;
+}
+
+/* 목록 — 카드 사이를 벌리고, 묶음 사이는 더 크게 벌린다 */
+.stack {
+  gap: 20px;
+}
+.result-layout > .stack > .stack:not(:first-child) {
+  margin-top: 28px;
+}
+.group-head {
+  padding-bottom: 6px;
+}
+
+/* 카드 안쪽 — 글이 벽에 붙지 않게 */
+.notice {
+  padding: 26px 24px;
+}
+.notice__title {
+  margin: 12px 0 10px;
+}
+.reason-rows {
+  margin-top: 22px;
+}
+.reason-row {
+  padding: 18px 0;
+}
+.notice__foot {
+  margin-top: 22px;
+  padding-top: 18px;
+}
+.passed-line {
+  margin-top: 20px;
+}
+
+/* 질문 화면 — 한 화면에 하나뿐인 질문은 더 크게 비운다 */
+.q-title {
+  margin: 18px 0 14px;
+}
+.q-sub {
+  line-height: 1.7;
+}
+
+/* 상세 — 패널 사이 간격과 안쪽 여백 */
+.detail-layout {
+  gap: 20px;
+}
+.detail-main {
+  gap: 20px;
+}
+.panel {
+  padding: 24px 22px;
+}
+.panel h2 {
+  margin-bottom: 18px;
+}
+.crit {
+  padding: 20px 0;
+}
+
+/* 프로필 */
+.section {
+  padding: 8px 22px;
+}
+.prow {
+  padding: 16px 0;
+}
+.basis {
+  padding: 24px 22px;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0 40px;
+  }
+  .subhead .container {
+    padding-top: 56px;
+    padding-bottom: 48px;
+  }
+  .stack {
+    gap: 24px;
+  }
+  .result-layout > .stack > .stack:not(:first-child) {
+    margin-top: 56px;
+  }
+  .result-layout {
+    gap: 56px;
+  }
+  .notice {
+    padding: 34px 36px;
+  }
+  .detail-layout {
+    gap: 48px;
+  }
+  .detail-main {
+    gap: 28px;
+  }
+  .panel {
+    padding: 36px 40px;
+  }
+  .basis {
+    padding: 28px 26px;
+  }
+  .onboard__inner {
+    width: 620px;
+  }
+}

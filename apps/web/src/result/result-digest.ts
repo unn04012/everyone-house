@@ -1,6 +1,5 @@
 import { ReasonCodeEnum, VerdictEnum, type Verdict } from '@everyone-house/domain/types';
 import type { MatchView } from '../api/api.types.js';
-import { VerdictCopy } from '../format/verdict-copy.js';
 import type { ProfileField } from '../profile/profile-draft.js';
 
 /** 지금 채우면 판정이 확정되는 항목 */
@@ -55,13 +54,6 @@ export class ResultDigest {
 
   public get notEligible(): MatchView[] {
     return this.of(VerdictEnum.NOT_ELIGIBLE);
-  }
-
-  /** 순서가 보장된 집계 (rail 의 '오늘의 판정') */
-  public get tally(): { verdict: Verdict; count: number }[] {
-    return [VerdictEnum.LIKELY_ELIGIBLE, VerdictEnum.NEEDS_REVIEW, VerdictEnum.NOT_ELIGIBLE]
-      .toSorted((left, right) => VerdictCopy.order(left) - VerdictCopy.order(right))
-      .map((verdict) => ({ verdict, count: this.countOf(verdict) }));
   }
 
   /**

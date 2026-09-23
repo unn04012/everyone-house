@@ -9,10 +9,13 @@ npm run build -w @everyone-house/web   # dist/
 
 ## 디자인
 
-`공공임대알리미-handoff` 패키지가 시각 기준이다. [HANDOFF.md](./HANDOFF.md) 를 같이 뒀다.
+`공공임대알리미-handoff` 패키지가 시각 기준이다. `HANDOFF.md` 는 저장소에 올리지 않고 로컬에만 둔다
+(`.gitignore`). 아래 규칙표가 그중 코드가 지켜야 할 부분을 옮겨 둔 것이다.
 
 - `src/styles/app.css` — 핸드오프의 디자인 토큰·컴포넌트 **원본 그대로**. 여기서 토큰을 고치지 않는다.
 - `src/styles/layout.css` — 핸드오프 HTML 의 page-local 스타일 + 리액트로 옮기며 필요해진 보정.
+- `src/styles/theme.css` — 토큰·표면 처리를 덮어쓰는 테마 층. `main.tsx` 의 import 한 줄을 빼면
+  핸드오프 원래 모습으로 돌아간다. 색 방향을 바꾸려면 이 파일의 `:root` 만 고치면 된다.
 
 지켜야 할 규칙은 HANDOFF §1 에 있고, 코드에서 그 규칙을 담당하는 자리는 다음과 같다.
 

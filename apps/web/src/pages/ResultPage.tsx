@@ -5,12 +5,19 @@ import type { ReasonView } from '../api/api.types.js';
 import { useApiClient } from '../app/api-context.js';
 import { useProfile } from '../app/profile-context.js';
 import { AppNav } from '../components/AppNav.js';
+import { BasisCard } from '../components/BasisCard.js';
 import { MissingBanner } from '../components/MissingBanner.js';
 import { NoticeCard } from '../components/NoticeCard.js';
-import { TallyCard } from '../components/TallyCard.js';
+import { ResultSkeleton } from '../components/ResultSkeleton.js';
 import { ChevronDownIcon, ChevronUpIcon, MinusCircleIcon } from '../components/icons.js';
 import { QuestionFlow } from '../profile/question-flow.js';
 import { ResultDigest } from '../result/result-digest.js';
+
+/** 접힘 없이 보여 주는 묶음. 순서는 적합 → 확인 필요 (HANDOFF §4) */
+const GROUPS = [
+  { verdict: VerdictEnum.LIKELY_ELIGIBLE, title: '지금 신청할 수 있어 보여요', modifier: 'group-head--ok' },
+  { verdict: VerdictEnum.NEEDS_REVIEW, title: '확인이 필요해요', modifier: 'group-head--review' },
+] as const;
 
 /** 결과 목록. 정렬은 적합 → 확인 필요 → 미해당, 미해당은 기본 접힘 (HANDOFF §4). */
 export function ResultPage() {
@@ -87,9 +94,9 @@ export function ResultPage() {
         <div className="container">
           <div>
             <h1>내 조건에 맞는 공고</h1>
+            {/* 로딩 중에 0 을 보여주면 '오늘 공고가 없다' 로 읽힌다 */}
             <p className="footnote" style={{ color: 'var(--color-muted)' }}>
-              오늘 수집 {digest.collectedToday}건 · 신청 가능 {digest.countOf(VerdictEnum.LIKELY_ELIGIBLE)} · 확인 필요 {digest.countOf(VerdictEnum.NEEDS_REVIEW)} · 안 맞음{' '}
-              {digest.countOf(VerdictEnum.NOT_ELIGIBLE)}
+              {loading ? '오늘 들어온 공고를 내 기준으로 맞춰 보는 중이에요' : `오늘 수집한 ${digest.collectedToday}건을 내 기준으로 걸렀어요`}
             </p>
           </div>
           <span className="footnote">정렬: 판정순</span>
@@ -97,16 +104,33 @@ export function ResultPage() {
       </div>
 
       <div className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
-        {loading && <p className="notice-empty">공고를 확인하고 있어요…</p>}
+        {loading && <ResultSkeleton />}
         {error && <p className="notice-empty">{error}</p>}
 
         {!loading && !error && (
           <div className="result-layout">
             <div className="stack">
               {digest.isEmpty && <p className="notice-empty">오늘 새로 들어온 공고가 없어요.</p>}
-              {digest.visible.map((match) => (
-                <NoticeCard key={match.matchId} match={match} onFix={goFix} />
-              ))}
+
+              {/* 판정별로 묶는다. 뱃지를 카드마다 반복하는 대신 묶음이 상태를 진다 */}
+              {GROUPS.map(({ verdict, title, modifier }) => {
+                const matches = digest.of(verdict);
+                if (matches.length === 0) {
+                  return null;
+                }
+                return (
+                  <div key={verdict} className="stack">
+                    <div className={`group-head ${modifier}`}>
+                      <span className="group-head__title">{title}</span>
+                      <span className="group-head__count">{matches.length}건</span>
+                      <span className="group-head__rule" aria-hidden="true" />
+                    </div>
+                    {matches.map((match) => (
+                      <NoticeCard key={match.matchId} match={match} onFix={goFix} showBadge={false} />
+                    ))}
+                  </div>
+                );
+              })}
 
               {notEligible.length > 0 && (
                 <>
@@ -124,7 +148,7 @@ export function ResultPage() {
 
             <aside className="rail">
               {missing && <MissingBanner summary={missing} onFix={goFix} />}
-              <TallyCard tally={digest.tally} />
+              <BasisCard draft={draft} />
             </aside>
           </div>
         )}
