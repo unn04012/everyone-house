@@ -23,6 +23,7 @@ const buildProfile = (overrides: Partial<Omit<UserProfileSchema, 'profileId'>> =
     householdAssets: 100_000_000,
     parentsIncome: null,
     parentsAssets: null,
+    parentsCount: 2,
     livesWithParents: false,
     carValue: 10_000_000,
     isHomeless: true,

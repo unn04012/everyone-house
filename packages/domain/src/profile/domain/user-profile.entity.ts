@@ -16,6 +16,7 @@ export class UserProfileEntity {
   private _householdAssets: number | null;
   private _parentsIncome: number | null;
   private _parentsAssets: number | null;
+  private _parentsCount: number;
   private _livesWithParents: boolean;
   private _carValue: number | null;
   private _isHomeless: boolean;
@@ -59,6 +60,9 @@ export class UserProfileEntity {
   }
   get parentsAssets() {
     return this._parentsAssets;
+  }
+  get parentsCount() {
+    return this._parentsCount;
   }
   get livesWithParents() {
     return this._livesWithParents;
@@ -116,6 +120,7 @@ export class UserProfileEntity {
     this._householdAssets = schema.householdAssets;
     this._parentsIncome = schema.parentsIncome;
     this._parentsAssets = schema.parentsAssets;
+    this._parentsCount = schema.parentsCount;
     this._livesWithParents = schema.livesWithParents;
     this._carValue = schema.carValue;
     this._isHomeless = schema.isHomeless;
@@ -140,6 +145,9 @@ export class UserProfileEntity {
     if (input.housingSubscriptionPayments < 0) {
       throw new Error('청약저축 납입회차는 0 이상이어야 합니다');
     }
+    if (input.parentsCount < 0 || input.parentsCount > 2) {
+      throw new Error('부모 인원수는 0~2 사이여야 합니다');
+    }
     return new UserProfileEntity({ ...input, profileId: randomUUID() });
   }
 
@@ -158,6 +166,7 @@ export class UserProfileEntity {
       householdAssets: this._householdAssets,
       parentsIncome: this._parentsIncome,
       parentsAssets: this._parentsAssets,
+      parentsCount: this._parentsCount,
       livesWithParents: this._livesWithParents,
       carValue: this._carValue,
       isHomeless: this._isHomeless,
@@ -196,8 +205,9 @@ export class UserProfileEntity {
           return null;
         }
         const assets = this._personalAssets === null || this._parentsAssets === null ? null : this._personalAssets + this._parentsAssets;
-        // 본인+부모의 가구원수는 별도로 묻지 않는다. 세대 가구원수로 근사한다.
-        return { income: this._personalIncome + this._parentsIncome, assets, householdSize: this._householdSize };
+        // 이 범위의 가구원수는 세대 전체가 아니라 본인 + 부모다.
+        // 형제가 세대에 있어도 '본인과 부모' 에는 들어가지 않는다.
+        return { income: this._personalIncome + this._parentsIncome, assets, householdSize: 1 + this._parentsCount };
       }
 
       case 'SELF_IF_NOT_HOUSEHOLDER':

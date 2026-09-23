@@ -65,6 +65,13 @@ export interface UserProfileSchema {
   parentsIncome: number | null;
   /** 부모의 총자산 (원). 모르면 null */
   parentsAssets: number | null;
+  /**
+   * 소득·자산 산정에 포함되는 부모 인원수 (보통 2, 한부모면 1).
+   *
+   * '본인과 부모' 범위의 가구원수는 세대 가구원수가 아니라 1 + 이 값이다 —
+   * 형제가 있어도 그 범위에는 들어가지 않는다.
+   */
+  parentsCount: number;
   /** 부모와 같은 세대인가(= 본인이 세대주가 아닌가). 청년 계층 판정을 가른다 */
   livesWithParents: boolean;
 

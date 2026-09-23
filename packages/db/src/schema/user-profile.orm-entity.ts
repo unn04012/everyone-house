@@ -40,6 +40,10 @@ export class UserProfileOrmEntity {
   @Column({ type: 'bigint', name: 'parents_assets', nullable: true, transformer: wonTransformer })
   parentsAssets!: number | null;
 
+  /** 소득·자산 산정에 포함되는 부모 인원수. '본인과 부모' 범위의 가구원수는 1 + 이 값이다 */
+  @Column({ type: 'int', name: 'parents_count', default: 2 })
+  parentsCount!: number;
+
   /** 부모와 같은 세대인가(= 세대주가 아닌가). 청년 계층 판정을 가른다 */
   @Column({ type: 'boolean', name: 'lives_with_parents', default: false })
   livesWithParents!: boolean;
